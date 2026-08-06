@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sreejita Mookherjee — Portfolio</title>
+  <link rel="stylesheet" href="styles.css?v=102">
+</head>
+<body>
+
+  <!-- Mobile-only top-right pill: avatar + hamburger. Toggles the same
+       .dots nav (restyled as a dropdown list on mobile) open/closed —
+       see the "MOBILE NAV TOGGLE" JS below and the mobile media query
+       in styles.css. Hidden entirely on desktop, where .dots is always
+       visible as the vertical tick nav. -->
+  <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navDots">
+    <img class="mobile-nav-avatar" src="assets/avatar.png" alt="" />
+    <svg class="mobile-nav-hamburger" viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+  </button>
+
+  <nav class="dots" id="navDots" aria-label="Section navigation">
+    <button class="dot is-active" data-go="0" data-label="Home" aria-label="Home"></button>
+    <button class="dot" data-go="1" data-label="Selected Work" aria-label="Selected Work"></button>
+    <button class="dot" data-go="2" data-label="Meet Sreejita" aria-label="Meet Sreejita"></button>
+    <button class="dot" data-go="3" data-label="My Journey" aria-label="My Journey"></button>
+    <button class="dot" data-go="4" data-label="Contact" aria-label="Contact"></button>
+  </nav>
+
+  <main class="horizontal" id="horizontal">
+    <div class="track" id="track">
+
+      <!-- ===================== PANEL 1 — Home ===================== -->
+      <section class="panel" id="panel-1">
+
+        <div class="paper-strip-wrap paper-strip-wrap--top">
+          <picture>
+            <source media="(max-width: 860px)" srcset="assets/mobile-paper-1.svg" />
+            <img class="paper-strip" data-anim="strip" src="assets/paper-1.svg" alt="" />
+          </picture>
+        </div>
+
+        <div class="stage-wrapper">
+          <div class="stage" id="stage-1">
+
+            <div class="vector-wrap">
+              <div class="vector-rotate">
+                <img src="assets/vector.svg" class="vector-img" alt="" />
+              </div>
+            </div>
+
+            <img class="star star-a" src="assets/star.svg" alt="" />
+            <img class="star star-b" src="assets/star.svg" alt="" />
+            <img class="star star-c" src="assets/star.svg" alt="" />
+            <img class="star star-d" src="assets/star.svg" alt="" />
+            <img class="star star-e" src="assets/star.svg" alt="" />
+
+            <p class="script script-top" data-anim="up">A little portfolio of</p>
+
+            <h1 class="headline headline-first" data-anim="pop">Sreejita</h1>
+            <h1 class="headline headline-second" data-anim="pop">Mookherjee</h1>
+
+            <p class="script script-bottom" data-anim="up">a product designer</p>
+
+            <!-- mobile-only "scroll to continue" cue (sage circle + arrow,
+                 built from the new sphere-2 asset) — sits between the hero
+                 text and the photo on mobile, matching the mobile design;
+                 not rendered at all on desktop, where the existing
+                 .scroll-hint bare arrow + wave-hand .sphere below still do
+                 that job. -->
+            <button type="button" class="mobile-scroll-cue" id="mobileScrollCue" aria-label="Scroll to Selected Work">
+              <img src="assets/sphere-2.svg" alt="" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+            </button>
+
+            <img class="p1-photo-card" data-anim="photoIn" src="assets/p1-hero-photo.png" alt="Sreejita Mookherjee" />
+
+            <div class="sphere" data-anim="pop">
+              <img class="sphere-badge" src="assets/sphere.svg" alt="" />
+              <img class="sphere-hand" src="assets/waving-hand.svg" alt="waving hand" />
+            </div>
+
+          </div>
+        </div>
+
+        <p class="scroll-hint" id="scrollHint">
+          <span>Scroll to continue</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </p>
+
+        <!-- mobile: this is the hero's own bottom-anchored transition into
+             Work (see the mobile media query) — NOT flowing content, fixed
+             to the viewport-height hero's bottom edge, with the photo
+             peeking out from behind it. Desktop keeps its own plain
+             paper-2.svg strip. -->
+        <div class="paper-strip-wrap paper-strip-wrap--bottom">
+          <picture>
+            <source media="(max-width: 860px)" srcset="assets/mobile-paper-2.svg?v=2" />
+            <img class="paper-strip paper-strip--bottom" data-anim="strip" src="assets/paper-2.svg" alt="" />
+          </picture>
+        </div>
+      </section>
+
+      <!-- ===================== PANEL 2 — Selected Work ===================== -->
+      <section class="panel" id="panel-2">
+
+        <div class="paper-strip-wrap paper-strip-wrap--top paper-strip-wrap--tilt-a">
+          <img class="paper-strip" data-anim="strip" src="assets/paper-3.svg" alt="" />
+        </div>
+
+        <div class="stage-wrapper">
+          <div class="stage" id="stage-2">
+            <div class="vector-wrap vector-wrap--2">
+              <div class="vector-rotate vector-rotate--2">
+                <img src="assets/vector.svg" class="vector-img" alt="" />
+              </div>
+            </div>
+
+            <img class="p2-star p2-star-a" src="assets/star.svg" alt="" />
+            <img class="p2-star p2-star-b" src="assets/star.svg" alt="" />
+            <img class="p2-star p2-star-c" src="assets/star.svg" alt="" />
+
+            <div class="p2-heading">
+              <p class="script p2-script" data-anim="up">Selected</p>
+              <h1 class="headline p2-title" data-anim="pop">Work</h1>
+            </div>
+
+            <div class="carousel" id="carousel" data-anim="cardIn" aria-roledescription="carousel">
+              <div class="carousel__stage" id="carouselStage">
+
+              <article class="pcard">
+                <img class="pcard__photo" src="assets/p2/owner-dashboard.jpg" alt="Owner Dashboard revamp" loading="lazy" decoding="async" />
+                <div class="pcard__cap">
+                  <div class="pcard__row">
+                    <h3>Owner dashboard revamp</h3>
+                    <span class="pcard__arrow" aria-hidden="true">
+                      <span class="pcard__cta-text">Read more</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                  </div>
+                  <p>Housing.com &middot; Case study</p>
+                </div>
+              </article>
+
+              <article class="pcard">
+                <img class="pcard__photo" src="assets/p2/hp-dashboard.jpg" alt="Housing Premium Dashboard" loading="lazy" decoding="async" />
+                <div class="pcard__cap">
+                  <div class="pcard__row">
+                    <h3>Premium user dashboard</h3>
+                    <span class="pcard__arrow" aria-hidden="true">
+                      <span class="pcard__cta-text">Read more</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                  </div>
+                  <p>Housing.com &middot; Case study</p>
+                </div>
+              </article>
+
+              <article class="pcard">
+                <img class="pcard__photo" src="assets/p2/unstop-landing.jpg" alt="Hiring platform landing page" loading="lazy" decoding="async" />
+                <div class="pcard__cap">
+                  <div class="pcard__row">
+                    <h3>Interactive landing page</h3>
+                    <span class="pcard__arrow" aria-hidden="true">
+                      <span class="pcard__cta-text">Read more</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                  </div>
+                  <p>Unstop &middot; Project</p>
+                </div>
+              </article>
+
+              <article class="pcard">
+                <img class="pcard__photo" src="assets/p2/hp-packages.jpg" alt="Housing Premium Packages" loading="lazy" decoding="async" />
+                <div class="pcard__cap">
+                  <div class="pcard__row">
+                    <h3>Plans page</h3>
+                    <span class="pcard__arrow" aria-hidden="true">
+                      <span class="pcard__cta-text">Read more</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                  </div>
+                  <p>Housing.com &middot; Project</p>
+                </div>
+              </article>
+
+              <article class="pcard" data-pdf="assets/p2/unstop-bridge.pdf">
+                <img class="pcard__photo" src="assets/p2/unstop-bridge.jpg" alt="Unstop Bridge" loading="lazy" decoding="async" />
+                <div class="pcard__cap">
+                  <div class="pcard__row">
+                    <h3>Unstop bridge</h3>
+                    <span class="pcard__arrow" aria-hidden="true">
+                      <span class="pcard__cta-text">Read more</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                  </div>
+                  <p>Unstop &middot; Case study</p>
+                </div>
+              </article>
+
+              <article class="pcard" data-pdf="assets/p2/poc.pdf">
+                <img class="pcard__photo" src="assets/p2/pay-on-credit.jpg" alt="Pay on Credit" loading="lazy" decoding="async" />
+                <div class="pcard__cap">
+                  <div class="pcard__row">
+                    <h3>Pay on credit</h3>
+                    <span class="pcard__arrow" aria-hidden="true">
+                      <span class="pcard__cta-text">Read more</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                  </div>
+                  <p>Housing.com &middot; Case study</p>
+                </div>
+              </article>
+
+              <article class="pcard">
+                <img class="pcard__photo" src="assets/p2/owner-dashboard.jpg" alt="Owner Dashboard revamp" loading="lazy" decoding="async" />
+                <div class="pcard__cap">
+                  <div class="pcard__row">
+                    <h3>Owner dashboard revamp</h3>
+                    <span class="pcard__arrow" aria-hidden="true">
+                      <span class="pcard__cta-text">Read more</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                  </div>
+                  <p>Housing.com</p>
+                </div>
+              </article>
+
+              <article class="pcard">
+                <img class="pcard__photo" src="assets/p2/unstop-landing.jpg" alt="Hiring platform landing page" loading="lazy" decoding="async" />
+                <div class="pcard__cap">
+                  <div class="pcard__row">
+                    <h3>Interactive landing page</h3>
+                    <span class="pcard__arrow" aria-hidden="true">
+                      <span class="pcard__cta-text">Read more</span>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </span>
+                  </div>
+                  <p>Unstop</p>
+                </div>
+              </article>
+
+            </div>
+
+            <div class="carousel__nav" id="carouselNav">
+              <button class="cbtn" data-dir="-1" aria-label="Previous project"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+              <button class="cbtn" data-dir="1" aria-label="Next project"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+            </div>
+          </div>
+
+          <!-- mobile-only pagination dots, populated + kept in sync with
+               the focused card by carousel.js; replaces the arrow buttons
+               above on mobile (hidden there via CSS) since the design has
+               no arrow affordance, just dots + swipe. Sits outside
+               .carousel (a sibling in the stage's flex column) rather
+               than inside it, since .carousel has a fixed height with
+               only absolutely-positioned children — an in-flow child
+               placed inside it would render at its top edge, not below
+               the cards. -->
+          <div class="carousel__dots" id="carouselDots"></div>
+
+          </div>
+        </div>
+
+        <div class="paper-strip-wrap paper-strip-wrap--bottom paper-strip-wrap--tilt-b">
+          <img class="paper-strip paper-strip--bottom" data-anim="strip" src="assets/paper-4.svg" alt="" />
+        </div>
+      </section>
+
+      <!-- ===================== PANEL 3 — Meet Sreejita ===================== -->
+      <section class="panel" id="panel-3">
+
+        <div class="paper-strip-wrap paper-strip-wrap--top">
+          <img class="paper-strip" data-anim="strip" src="assets/paper-5.svg" alt="" />
+        </div>
+
+        <div class="stage-wrapper">
+          <div class="stage" id="stage-3">
+
+            <div class="vector-wrap">
+              <div class="vector-rotate">
+                <img src="assets/vector.svg" class="vector-img" alt="" />
+              </div>
+            </div>
+
+            <img class="star star-a" src="assets/star.svg" alt="" />
+            <img class="star star-b" src="assets/star.svg" alt="" />
+            <img class="star star-c" src="assets/star.svg" alt="" />
+            <img class="star star-d" src="assets/star.svg" alt="" />
+            <img class="star star-e" src="assets/star.svg" alt="" />
+
+            <p class="script p3-hey" data-anim="up">Hey there,</p>
+            <div class="p3-title-row">
+              <h1 class="headline p3-meet" data-anim="pop">Meet</h1>
+              <h1 class="headline p3-name" data-anim="pop">Sreejita</h1>
+            </div>
+
+            <!-- Description card, tools strip and photo card are your own
+                 flattened assets — frame, frosted look, decorative lines,
+                 pop-out photo effect and toolkit caption are already baked
+                 into each image, so these are placed as single images
+                 rather than reconstructed from separate layers. Mobile
+                 swaps the desc-card image for live text and groups the
+                 tools strip with the photo card instead — see the
+                 `.p3-photo-group` / `.p3-bio-text` mobile rules in
+                 styles.css. -->
+            <img class="p3-desc-card" data-anim="cardIn" src="assets/p3/desc-card.png?v=3" alt="" loading="lazy" decoding="async" />
+
+            <div class="p3-photo-group">
+              <img class="p3-tools-strip" data-anim="toolsIn" src="assets/p3/tools-strip.png" alt="Figma, Claude, Cursor, Photoshop" loading="lazy" decoding="async" />
+              <img class="p3-photo-card" data-anim="photoIn" src="assets/p3/photo-card.png?v=2" alt="Sreejita Mookherjee — Toolkit: Figma, Claude Code, Cursor, Make, Figjam, Photoshop & more" loading="lazy" decoding="async" />
+            </div>
+
+            <div class="p3-bio-text" data-anim="up">
+              <p>Designer by profession, problem solver by nature. For the past 4+ years, I've been designing products that improve conversions, simplify complex flows, and make digital experiences a little more delightful. I enjoy tackling growth, design systems, and those "How do we make this easier?" kind of problems.</p>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="paper-strip-wrap paper-strip-wrap--bottom">
+          <img class="paper-strip paper-strip--bottom" data-anim="strip" src="assets/paper-6.svg" alt="" />
+        </div>
+      </section>
+
+      <!-- ===================== PANEL 4 — Experience ===================== -->
+      <section class="panel" id="panel-4">
+
+        <div class="paper-strip-wrap paper-strip-wrap--top paper-strip-wrap--tilt-b">
+          <img class="paper-strip" data-anim="strip" src="assets/paper-1.svg" alt="" />
+        </div>
+
+        <div class="stage-wrapper">
+          <div class="stage" id="stage-4">
+
+            <div class="vector-wrap vector-wrap--2">
+              <div class="vector-rotate vector-rotate--2">
+                <img src="assets/vector.svg" class="vector-img" alt="" />
+              </div>
+            </div>
+
+            <img class="p2-star p2-star-a" src="assets/star.svg" alt="" />
+            <img class="p2-star p2-star-b" src="assets/star.svg" alt="" />
+            <img class="p2-star p2-star-c" src="assets/star.svg" alt="" />
+
+            <p class="script p4-here" data-anim="up">Here's</p>
+            <div class="p4-title-row">
+              <h1 class="headline p4-my" data-anim="pop">My</h1>
+              <h1 class="headline p4-journey" data-anim="pop">Journey</h1>
+            </div>
+
+            <div class="p4-timeline" data-anim="cardIn">
+              <div class="p4-timeline-line"></div>
+
+              <p class="p4-section-label p4-section-label--a">Full-time</p>
+
+              <div class="p4-entry p4-entry--1">
+                <img class="p4-entry-logo" src="assets/p4/housing.png" alt="Housing.com" loading="lazy" decoding="async" />
+                <div class="p4-entry-text">
+                  <h3>UI/UX Designer</h3>
+                  <p>Housing.com &middot; Jul 2025 &ndash; Present</p>
+                </div>
+              </div>
+
+              <div class="p4-entry p4-entry--2">
+                <img class="p4-entry-logo" src="assets/p4/paytm.png" alt="Paytm" loading="lazy" decoding="async" />
+                <div class="p4-entry-text">
+                  <h3>Junior Product Designer</h3>
+                  <p>Paytm &middot; Dec 2024 &ndash; Jul 2025</p>
+                </div>
+              </div>
+
+              <div class="p4-entry p4-entry--3">
+                <img class="p4-entry-logo" src="assets/p4/unstop.jpg" alt="Unstop" loading="lazy" decoding="async" />
+                <div class="p4-entry-text">
+                  <h3>Product Designer</h3>
+                  <p>Unstop &middot; Jan 2023 &ndash; Dec 2024</p>
+                </div>
+              </div>
+
+              <p class="p4-section-label p4-section-label--b">Internships</p>
+
+              <div class="p4-entry p4-entry--4">
+                <img class="p4-entry-logo" src="assets/p4/myrevue.jpeg" alt="MyRevue" loading="lazy" decoding="async" />
+                <div class="p4-entry-text">
+                  <h3>UI/UX Intern</h3>
+                  <p>MyRevue &middot; Nov 2022 &ndash; Dec 2022</p>
+                </div>
+              </div>
+
+              <div class="p4-entry p4-entry--5">
+                <img class="p4-entry-logo" src="assets/p4/teachoo.png" alt="Teachoo" loading="lazy" decoding="async" />
+                <div class="p4-entry-text">
+                  <h3>UI/UX Intern</h3>
+                  <p>Teachoo &middot; May 2022 &ndash; Aug 2022</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="paper-strip-wrap paper-strip-wrap--bottom paper-strip-wrap--tilt-a">
+          <img class="paper-strip paper-strip--bottom" data-anim="strip" src="assets/paper-2.svg" alt="" />
+        </div>
+      </section>
+
+      <!-- ===================== PANEL 5 — Contact ===================== -->
+      <section class="panel" id="panel-5">
+
+        <div class="paper-strip-wrap paper-strip-wrap--top">
+          <img class="paper-strip" data-anim="strip" src="assets/paper-3.svg" alt="" />
+        </div>
+
+        <div class="stage-wrapper">
+          <div class="stage" id="stage-5">
+
+            <div class="vector-wrap">
+              <div class="vector-rotate">
+                <img src="assets/vector.svg" class="vector-img" alt="" />
+              </div>
+            </div>
+
+            <img class="star star-a" src="assets/star.svg" alt="" />
+            <img class="star star-b" src="assets/star.svg" alt="" />
+            <img class="star star-c" src="assets/star.svg" alt="" />
+            <img class="star star-d" src="assets/star.svg" alt="" />
+            <img class="star star-e" src="assets/star.svg" alt="" />
+
+            <div class="p5-heading">
+              <p class="script p5-feels" data-anim="up">Interested in working together?</p>
+              <h1 class="headline p5-connect" data-anim="pop">Let's Connect</h1>
+            </div>
+
+            <div class="p5-links" data-anim="up">
+              <a class="p5-link" href="mailto:sm.sreejita@gmail.com">
+                <img class="p5-link-icon" src="assets/p4/gmail.webp" alt="" loading="lazy" decoding="async" />
+                sm.sreejita@gmail.com
+                <button class="p5-copy-btn" type="button" data-copy="sm.sreejita@gmail.com" aria-label="Copy email address">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="8" y="8" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                    <path d="M16 8V5.5C16 4.67157 15.3284 4 14.5 4H5.5C4.67157 4 4 4.67157 4 5.5V14.5C4 15.3284 4.67157 16 5.5 16H8" stroke="currentColor" stroke-width="1.8"/>
+                  </svg>
+                </button>
+              </a>
+              <a class="p5-link" href="https://www.linkedin.com/in/sreejita-mookherjee" target="_blank" rel="noopener">
+                <img class="p5-link-icon" src="assets/p4/linkedin.png" alt="" loading="lazy" decoding="async" />
+                LinkedIn
+              </a>
+              <a class="p5-link" href="https://www.behance.net/sreejitamookherjee" target="_blank" rel="noopener">
+                <img class="p5-link-icon" src="assets/p4/behance.png" alt="" loading="lazy" decoding="async" />
+                Behance
+              </a>
+            </div>
+
+            <div class="sphere p5-sphere" data-anim="pop">
+              <img class="sphere-badge" src="assets/sphere.svg" alt="" />
+              <img class="sphere-hand" src="assets/waving-hand.svg" alt="waving hand" />
+            </div>
+
+          </div>
+        </div>
+
+        <div class="paper-strip-wrap paper-strip-wrap--bottom">
+          <img class="paper-strip paper-strip--bottom" data-anim="strip" src="assets/paper-4.svg" alt="" />
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Case-study PDF viewer: a centered modal on desktop, a full-bleed
+       "inner page" on mobile (same markup, styles.css switches the
+       presentation by breakpoint) — just renders the PDF file directly,
+       no re-authored case-study page needed. -->
+  <div class="pdf-overlay" id="pdfOverlay" role="dialog" aria-modal="true" aria-label="Case study PDF">
+    <button class="pdf-overlay__nav pdf-overlay__nav--prev" id="pdfOverlayPrev" type="button" aria-label="Previous project">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
+    <div class="pdf-overlay__panel">
+      <div class="pdf-overlay__header">
+        <span class="pdf-overlay__title" id="pdfOverlayTitle"></span>
+        <button class="pdf-overlay__close" id="pdfOverlayClose" type="button" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <iframe class="pdf-overlay__frame" id="pdfOverlayFrame" title="Case study PDF"></iframe>
+    </div>
+    <button class="pdf-overlay__nav pdf-overlay__nav--next" id="pdfOverlayNext" type="button" aria-label="Next project">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+  </div>
+
+  <script src="assets/vendor/gsap.min.js"></script>
+  <script src="assets/vendor/ScrollTrigger.min.js"></script>
+  <script src="script.js?v=9"></script>
+  <script src="carousel.js?v=12"></script>
+  <script src="flip.js?v=5"></script>
+  <script src="scroll-hint.js?v=3"></script>
+</body>
+</html>
