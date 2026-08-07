@@ -26,6 +26,18 @@
   src: url('assets/fonts/source-serif-4-regular.woff2') format('woff2');
 }
 
+/* Light (300) — for the work-card subtitle, which needed a weight
+   below Regular (the only one self-hosted until now). Same lesson as
+   Oswald Medium above: without an actual Light file registered,
+   `font-weight: 300` would've just fallen back to Regular. */
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('assets/fonts/source-serif-4-light.woff2') format('woff2');
+}
+
 :root {
   --bg: #f4efe7;
   --ink: #262626;
@@ -423,7 +435,7 @@ body.js-flip .panel {
   flex: 1 1 auto; min-width: 0;
   overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
-.pcard__cap p { font-family: "Source Serif 4", serif; font-size: 15px; line-height: 1.2; color: #262626; margin: 4px 0 0; letter-spacing: normal; }
+.pcard__cap p { font-family: "Source Serif 4", serif; font-weight: 400; font-size: 14px; line-height: 1.2; color: var(--ink); opacity: 0.72; margin: 4px 0 0; letter-spacing: normal; }
 
 /* arrow badge — animates in on the focused/centred card. Collapsed to
    width: 0 (not just opacity: 0) by default so it reserves no space at
@@ -1320,7 +1332,7 @@ body.js-flip .panel {
   .pcard:nth-child(8) { z-index: 8; }
 
   .pcard__cap h3 {
-    font-size: 17px;
+    font-size: 18px;
     line-height: normal;
     overflow: hidden;
     white-space: normal;
