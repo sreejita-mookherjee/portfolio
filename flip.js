@@ -146,6 +146,20 @@
         onToggle: (self) => { if (self.isActive) setActiveDot(i); }
       });
     });
+    /* panel-2's decorative vector/stars are position: fixed (see the
+       mobile media query in styles.css) so they can act as a constant
+       backdrop behind the whole scrolling card stack — but "fixed"
+       has no idea which section is actually on screen, so without this
+       it kept painting over every other panel too (reported as
+       "multiple vectors" showing in the hero). Toggle visibility on
+       body based on panel-2's own real scroll range instead. */
+    const workPanel = document.getElementById("panel-2");
+    if (workPanel) {
+      ScrollTrigger.create({
+        trigger: workPanel, start: "top bottom", end: "bottom top",
+        onToggle: (self) => body.classList.toggle("is-work-active", self.isActive)
+      });
+    }
   }
 
   /* ---------- PHONES: vertical scroll with gentle reveals ---------- */

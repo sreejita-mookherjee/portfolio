@@ -923,6 +923,14 @@ body.js-flip .panel {
        overlap at normal height). -13vw keeps a real ~38px clear gap
        from the cue while still tucking behind the torn paper. */
     --hero-photo-bottom: -22.73vw; /* moved down 20px, then 15px more = 35px total */
+    /* the scroll-cue's own top gap — deliberately bigger than
+       --hero-spacing (measured: cue sat only ~13px under the text but
+       left a ~242px dead gap down to the bottom-anchored photo below
+       it, since that photo doesn't flow right after the cue). Eats
+       into that slack instead of leaving it empty; shrinks at the
+       shorter-viewport tiers below where there's much less slack to
+       spare (the photo itself climbs higher there). */
+    --hero-cue-margin-top: 15vw;
   }
 
   /* ---- Height-responsive breakpoints -------------------------------
@@ -943,6 +951,7 @@ body.js-flip .panel {
       --hero-cue-size: 17vw;
       --hero-photo-size: 56vw;
       --hero-photo-bottom: 1.27vw; /* moved down 20px, then 15px more; re-verify cue clearance */
+      --hero-cue-margin-top: 11vw;
     }
   }
   @media (max-height: 760px) {
@@ -955,6 +964,7 @@ body.js-flip .panel {
       --hero-cue-size: 14vw;
       --hero-photo-size: 46vw;
       --hero-photo-bottom: 8.17vw; /* moved down 20px, then 15px more; re-verify cue clearance */
+      --hero-cue-margin-top: 8vw;
     }
   }
   @media (max-height: 700px) {
@@ -967,6 +977,7 @@ body.js-flip .panel {
       --hero-cue-size: 11.5vw;
       --hero-photo-size: 38vw;
       --hero-photo-bottom: 8.17vw; /* moved down 20px, then 15px more; re-verify overlap */
+      --hero-cue-margin-top: 6vw;
     }
   }
   @media (max-height: 650px) {
@@ -979,6 +990,7 @@ body.js-flip .panel {
       --hero-cue-size: 9.5vw;
       --hero-photo-size: 31vw;
       --hero-photo-bottom: 9.27vw; /* moved down 20px, then 15px more; re-verify overlap */
+      --hero-cue-margin-top: 5vw;
     }
   }
   /* stage-wrapper/stage still fill the space below the top strip — not
@@ -1196,7 +1208,7 @@ body.js-flip .panel {
     width: var(--hero-cue-size);
     height: calc(var(--hero-cue-size) * 1.083); /* same 73.6:80 aspect as the default size */
     flex: none;
-    margin: var(--hero-spacing) 0 4px;
+    margin: var(--hero-cue-margin-top) 0 4px;
     animation: mobileCueBounce 1.4s ease-in-out infinite;
     /* now a real <button> (clicking it scrolls to Selected Work) —
        strip the native button chrome so it still looks like the plain
@@ -1255,12 +1267,21 @@ body.js-flip .panel {
      instead so they read as a constant backdrop/corner accents behind
      the whole scrolling stack, not one faint smudge wherever .stage's
      midpoint happens to land. */
+  /* fixed positioning alone isn't scoped to panel-2 — a fixed element
+     paints on top of whatever section the viewport is actually showing,
+     so without this it also rendered (a second, duplicate-looking
+     vector) over the hero, Meet Sreejita, etc. the whole time. Gated on
+     a body class flip.js toggles based on panel-2's own ScrollTrigger
+     (visible only while panel-2 is genuinely the active section). */
   #panel-2 .vector-wrap {
     position: fixed;
     left: 50%; top: 50%;
     transform: translate(-50%, -50%);
+    visibility: hidden;
   }
-  #panel-2 .p2-star { position: fixed; }
+  #panel-2 .p2-star { position: fixed; visibility: hidden; }
+  body.is-work-active #panel-2 .vector-wrap,
+  body.is-work-active #panel-2 .p2-star { visibility: visible; }
 
   .carousel {
     position: static;
@@ -1319,7 +1340,7 @@ body.js-flip .panel {
   .pcard:nth-child(5) { transform: rotate(-4deg); }
   .pcard:nth-child(6) { transform: rotate(3deg); }
   .pcard:nth-child(7) { transform: rotate(-2deg); }
-  .pcard:nth-child(8) { transform: rotate(4deg); }
+  .pcard:nth-child(8) { transform: rotate(1.5deg); } /* the final resting card — toned down from 4deg, which read as too tilted once it's the one left sitting on top */
   /* later cards need a higher stacking order so they visibly cover the
      earlier ones as they scroll into the shared sticky position */
   .pcard:nth-child(1) { z-index: 1; }
@@ -1489,7 +1510,6 @@ body.js-flip .panel {
   position: fixed; inset: 0; z-index: 700; /* above the mobile nav pill's 600 */
   display: none;
   align-items: center; justify-content: center;
-  gap: 22px;
   background: rgba(20, 20, 20, 0.6);
   padding: 40px;
 }
@@ -1498,8 +1518,8 @@ body.js-flip .panel {
   position: relative;
   display: flex; flex-direction: column;
   background: #fff;
-  width: min(920px, 100%);
-  height: min(88vh, 1050px);
+  width: min(1080px, 82vw);
+  height: min(820px, 82vh);
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.5);
@@ -1523,7 +1543,6 @@ body.js-flip .panel {
   text-transform: uppercase;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.pdf-overlay__frame { display: block; flex: 1 1 auto; width: 100%; border: 0; background: #ece7dd; }
 /* subtle — a plain stroke icon, no filled circle behind it */
 .pdf-overlay__close {
   flex: 0 0 auto;
@@ -1537,30 +1556,115 @@ body.js-flip .panel {
 .pdf-overlay__close:hover { color: #f4efe7; background: rgba(255, 255, 255, 0.1); }
 .pdf-overlay__close svg { width: 16px; height: 16px; display: block; }
 
-/* desktop-only prev/next — swap which project's PDF is showing without
-   closing the modal; sit outside the panel, not crowding it */
-.pdf-overlay__nav {
-  flex: 0 0 auto;
-  width: 46px; height: 46px; border-radius: 50%;
-  background: #262626;
+/* the pdf.js render target — every slide gets its own <canvas>, stacked
+   vertically and scrolled through natively, same model on both
+   breakpoints now (desktop is just a smaller centered modal rather
+   than a separate one-slide-at-a-time pager). scroll-snap-type turns
+   plain scrolling into "settles on the nearest slide" — smooth to move
+   through, but always lands cleanly on one rather than half-showing
+   two. position: relative so the page-count pill below can overlay
+   directly on the slide instead of taking its own footer row. */
+.pdf-overlay__viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto; /* zoomed-in slides (desktop zoom control) can exceed panel width — without this the extra width just clips instead of scrolling into view */
+  /* scroll-behavior: smooth was fighting direct wheel/trackpad input —
+     combined with scroll-snap it made the browser try to animate/settle
+     toward a snap point on every small scroll tick instead of just
+     tracking the gesture, which read as laggy/delayed rather than
+     smooth. Snapping alone (without forcing smooth interpolation on
+     every tick) still gives the "settles cleanly on one slide" feel
+     without fighting the scroll itself. */
+  scroll-snap-type: y proximity;
+  background: #ece7dd;
+}
+/* hand tool — only meaningful once zoomed in (is-zoomed, toggled in
+   setZoom); grabbing while actively dragging (is-panning) */
+.pdf-overlay__viewport.is-zoomed { cursor: grab; }
+.pdf-overlay__viewport.is-zoomed.is-panning { cursor: grabbing; scroll-behavior: auto; }
+.pdf-overlay__pages {
+  display: flex;
+  flex-direction: column;
+  /* plain `center` only exposes HALF of any horizontal overflow to
+     scrolling (a classic flexbox pitfall: centering treats the
+     overflow as split evenly on both sides, but scrollLeft can't go
+     negative, so the "before" half is trapped and unreachable) —
+     `safe center` is the standard fix, falling back to start-alignment
+     specifically when centering would overflow. Matters here because
+     zooming in (desktop's manual zoom control) can make a slide wider
+     than the panel. */
+  align-items: safe center;
+  width: 100%;
+  gap: 20px;
+  padding: 20px 0;
+}
+.pdf-overlay__page {
+  display: block;
+  background: #fff;
+  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.3);
+  scroll-snap-align: start;
+}
+
+.pdf-overlay__pagecount {
+  position: absolute;
+  left: 50%; bottom: 14px;
+  transform: translateX(-50%);
+  background: rgba(38, 38, 38, 0.5);
+  color: #f4efe7;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  padding: 5px 13px;
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 2;
+}
+.pdf-overlay__pagecount[hidden] { display: none; }
+
+/* desktop-only manual zoom — mobile relies on native pinch-zoom instead
+   (see the gesture-blocking note in pdf-viewer.js for why the two can't
+   coexist as separate controls there), so this whole cluster is hidden
+   on mobile below. */
+.pdf-overlay__zoom {
+  position: absolute;
+  right: 14px; bottom: 14px;
+  display: flex; gap: 6px;
+  z-index: 2;
+}
+.pdf-overlay__zoombtn {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(38, 38, 38, 0.5);
   border: none;
   color: #f4efe7;
   display: grid; place-items: center;
   cursor: pointer;
-  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.5);
-  transition: background-color .2s ease;
+  transition: background-color .2s ease, opacity .2s ease;
 }
-.pdf-overlay__nav:hover { background: #3a3a3a; }
-.pdf-overlay__nav svg { width: 20px; height: 20px; display: block; }
-.pdf-overlay__nav[hidden] { display: none; }
+.pdf-overlay__zoombtn:hover:not(:disabled) { background: rgba(38, 38, 38, 0.8); }
+.pdf-overlay__zoombtn:disabled { opacity: 0.3; cursor: default; }
+.pdf-overlay__zoombtn svg { width: 15px; height: 15px; display: block; }
 
 @media (max-width: 860px) {
-  /* full-bleed "inner page" instead of a floating dialog */
-  .pdf-overlay { padding: 0; gap: 0; background: #ece7dd; }
+  .pdf-overlay__zoom { display: none; }
+  /* full-bleed "inner page" instead of a floating dialog. Pinned to the
+     top-left (not centered) — centering a 100dvh/100svh panel inside a
+     plain inset:0 backdrop left a sliver of the backdrop showing above
+     the header on some phones (100vh-style backdrop sizing vs. the
+     panel's dynamic-viewport height don't always agree to the pixel,
+     and centering turns any such gap into a visible peek at the top);
+     anchoring flush to the top/left removes the dependency on those
+     two ever matching exactly. */
+  .pdf-overlay { padding: 0; background: #ece7dd; align-items: flex-start; justify-content: flex-start; }
   .pdf-overlay__panel {
     width: 100vw; height: 100dvh; height: 100svh;
     border-radius: 0; box-shadow: none;
   }
   .pdf-overlay__header { padding-top: max(10px, env(safe-area-inset-top)); }
-  .pdf-overlay__nav { display: none; } /* no room on mobile — prev/next stays desktop-only */
+  .pdf-overlay__pages { gap: 16px; padding: 16px 12px 40px; }
+  /* no page-count pill on mobile — same as before this rework, it never
+     had one; just a plain stacked scroll */
+  .pdf-overlay__pagecount { display: none; }
 }
