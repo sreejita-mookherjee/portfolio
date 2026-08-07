@@ -139,6 +139,19 @@
          entrance content, so it just skips the reveal system and
          renders at full opacity immediately. */
       if (el.closest("#panel-1 .paper-strip-wrap--bottom")) return;
+      /* #carousel itself (not its cards) keeps a lingering inline
+         transform after this entrance animation plays (GSAP doesn't
+         clear it — the ScrollTrigger's toggleActions:"...reverse"
+         needs a value to animate back to if you scroll up again). That
+         leftover transform on an ANCESTOR of the sticky-positioned
+         .pcard elements breaks their position: sticky — confirmed live
+         (cards stopped pinning, the heading appeared to "move with"
+         them since it was the only thing genuinely still stuck). The
+         cards themselves already have plenty of scroll-driven visual
+         interest from the stack effect, so this entrance animation
+         just isn't worth the risk on mobile. Desktop is untouched —
+         its own reveal system (addReveals(), above) still runs this. */
+      if (el.id === "carousel") return;
       const [from, to] = revealStates(el);
       gsap.fromTo(el, from, {
         ...to, duration: 0.8, ease: "power3.out",
@@ -146,6 +159,32 @@
       });
     });
     wireVerticalDots();
+
+    /* Selected Work's heading pins above the card stack for exactly as
+       long as the stack itself is scrolling. Two earlier approaches
+       both drifted out of sync with the real last-card release point:
+       plain CSS position: sticky stuck for as long as .stage's own
+       (much taller) containing block allowed; a class-toggle with a
+       hand-guessed pixel "end" offset also missed (confirmed: the
+       trailing spacer's real position when the card actually released
+       wasn't anywhere near the offset the math assumed). GSAP's own
+       `pin` measures #carouselStage's real rendered bottom edge at
+       refresh time instead of guessing a pixel value, so it can't
+       drift — release the pin exactly when that container's bottom
+       reaches the same 129px line the cards themselves stick at.
+       pinSpacing: false because the heading isn't meant to reserve
+       extra layout space the way a normal pin would (it overlays the
+       cards scrolling underneath it, same as position: sticky would). */
+    if (document.querySelector(".p2-heading") && document.querySelector("#carouselStage")) {
+      ScrollTrigger.create({
+        trigger: ".p2-heading",
+        start: "top 28px",
+        endTrigger: "#carouselStage",
+        end: "bottom 650px", // calibrated against the actual measured release point (129px undershot it by ~500px)
+        pin: true,
+        pinSpacing: false
+      });
+    }
   });
 
   /* ---------- REDUCED MOTION: no animation, everything visible ---------- */

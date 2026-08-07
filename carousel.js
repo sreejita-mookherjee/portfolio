@@ -10,8 +10,19 @@ function initCarousel() {
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const isTouch = window.matchMedia("(max-width: 860px)").matches;
 
+  /* MOBILE: no JS at all — styles.css lays the cards out as a plain
+     sticky-positioned stack in normal document flow (each card pins at
+     the same scroll offset, so the next one slides up and covers it).
+     Was previously a hand-rolled touch-swipe engine (discrete index,
+     live drag tracking, a "1/8" counter pill); replaced entirely by
+     the stack, which needs no touch handlers and can't fight with the
+     browser's native scroll/zoom gestures the way the swipe engine
+     occasionally did. */
+  if (isTouch) return;
+
   /* pagination — a single "current/total" counter in a pill (e.g.
-     "1/8") instead of one dot per card. Built to match whatever n is
+     "1/8"), desktop only now (mobile dropped the counter along with
+     the swipe carousel — see above). Built to match whatever n is
      rather than hard-coding the total. */
   const dotsWrap = document.getElementById("carouselDots");
   let counterCurrent = null;
@@ -27,105 +38,6 @@ function initCarousel() {
     total.textContent = String(n);
     pill.append(counterCurrent, sep, total);
     dotsWrap.appendChild(pill);
-  }
-
-  /* =====================================================================
-     MOBILE: a discrete current-index carousel using the frame's REAL
-     card widths (204px side / 232px focused) and a flat 16px gap,
-     rather than a uniform base size scaled by a transform — scaling a
-     single base size can't produce an exact flat gap once the centre
-     card is a different size from its neighbours (the gap balloons by
-     however much the centre card grows). Still an infinite loop: every
-     card's signed distance from `current` wraps circularly, so there
-     are always neighbours peeking on both sides, including past the
-     first/last card. Only cards within 2 slots of centre are
-     positioned/shown; the rest sit hidden.
-     ===================================================================== */
-  if (isTouch) {
-    root.classList.add("is-fan");
-    cards.forEach((c) => { c.style.transition = "transform .35s ease, width .35s ease, opacity .35s ease"; });
-
-    let current = 0;
-    let sideW = 0, focusW = 0, gap = 16;
-    function measure() {
-      sideW = cards[0].getBoundingClientRect().width || 204;
-      focusW = sideW * (232 / 204);
-      gap = 16 * (sideW / 204);
-    }
-    measure();
-    window.addEventListener("resize", measure);
-
-    function centerForSlot(d) {
-      if (d === 0) return 0;
-      const dir = d > 0 ? 1 : -1;
-      let x = focusW / 2 + gap + sideW / 2;
-      for (let k = 2; k <= Math.abs(d); k++) x += sideW + gap;
-      return dir * x;
-    }
-
-    /* `drag` is a live px offset applied to every card while a finger is
-       down, on top of the settled index positions — this is what makes
-       the row visibly track the finger in real time instead of only
-       snapping once on release. Cards now follow the finger 1:1
-       (dragging right-to-left moves them left, same direction as the
-       finger — reversed from the earlier "opposite direction" build
-       per feedback), so `drag = dx` directly. */
-    let drag = 0;
-
-    /* The title's 1-line<->2-line reveal and the "Read more" button's
-       show/hide are driven by max-height transitions in styles.css (see
-       .pcard__cap h3 / .pcard__arrow) rather than a JS fade+delay hack —
-       a plain class toggle here is enough, because max-height (unlike
-       white-space/display) genuinely animates, so it glides open/shut
-       in step with the same .is-focus toggle that drives the width/
-       transform transition — one continuous motion, nothing to
-       orchestrate or time by hand. */
-    function render() {
-      for (let i = 0; i < n; i++) {
-        let d = (((i - current) % n) + n) % n;
-        if (d > n / 2) d -= n; // shortest signed distance, wraps past either end
-        const el = cards[i];
-        const visible = Math.abs(d) <= 2;
-        el.style.opacity = visible ? "1" : "0";
-        el.style.zIndex = String(100 - Math.abs(d));
-        el.style.width = (d === 0 ? focusW : sideW).toFixed(1) + "px";
-        const x = (visible ? centerForSlot(d) : centerForSlot(d < 0 ? -3 : 3)) + drag;
-        el.style.transform = "translate(-50%,-50%) translateX(" + x.toFixed(1) + "px)";
-        el.classList.toggle("is-focus", d === 0);
-        if (d === 0 && counterCurrent) counterCurrent.textContent = String(i + 1);
-      }
-    }
-    render();
-
-    function goTo(i) { current = ((i % n) + n) % n; render(); }
-
-    function setTransition(on) {
-      cards.forEach((c) => { c.style.transition = on ? "transform .35s ease, width .35s ease, opacity .35s ease" : "none"; });
-    }
-    setTransition(true);
-
-    let touchStartX = null;
-    root.addEventListener("touchstart", (e) => {
-      touchStartX = e.touches[0].clientX;
-      drag = 0;
-      setTransition(false); // live 1:1 tracking while the finger is down, no easing lag
-    }, { passive: true });
-    root.addEventListener("touchmove", (e) => {
-      if (touchStartX === null) return;
-      drag = e.touches[0].clientX - touchStartX;
-      render();
-    }, { passive: true });
-    root.addEventListener("touchend", (e) => {
-      if (touchStartX === null) return;
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      touchStartX = null;
-      drag = 0;
-      setTransition(true); // ease into the settled/snapped position
-      if (Math.abs(dx) > 30) goTo(current + (dx < 0 ? 1 : -1));
-      else render();
-    }, { passive: true });
-
-    return; // skip the desktop orbit engine entirely on mobile
   }
 
   /* =====================================================================
@@ -206,6 +118,10 @@ function initCarousel() {
       if (focusIdx >= 0) cards[focusIdx].classList.remove("is-focus");
       if (want >= 0) cards[want].classList.add("is-focus");
       focusIdx = want;
+      /* the "1/8" pill never actually updated past its initial "1" —
+         pre-existing, unrelated to the mobile stack rework, fixed
+         while already in this function */
+      if (want >= 0 && counterCurrent) counterCurrent.textContent = String(want + 1);
     }
   }
 

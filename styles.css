@@ -466,6 +466,9 @@ body.js-flip .panel {
 /* mobile-only pagination dots — hidden on desktop, where the arrow
    buttons above are the nav affordance. See the mobile media query. */
 .carousel__dots { display: none; }
+/* mobile-only sticky-stack spacer — inert on desktop, where the
+   carousel is absolutely positioned and doesn't use normal flow. */
+.pcard-stack-spacer { display: none; }
 
 /* ===================================================================
    Panel 3 — "Meet Sreejita" (node 92:29537)
@@ -1196,110 +1199,145 @@ body.js-flip .panel {
     50% { transform: translateY(6px); }
   }
 
-  /* ---------------- Panel 2 — Selected Work ---------------- */
+  /* ---------------- Panel 2 — Selected Work: sticky card stack -------
+     Replaced the touch-swipe carousel entirely — cards now sit in
+     normal vertical document flow, each pinned via position: sticky at
+     the same offset, so scrolling makes the next card slide up and
+     cover the one before it, like flipping through a loosely-stacked
+     pile of photos. Every card always shows its full content (title,
+     company/label, "Read more") now — there's no more "focused vs
+     side" state to gate on, since cards aren't cycling through one
+     focused slot anymore. Pure CSS: no touch handlers, no JS-driven
+     index/width/transform math, no swipe-vs-native-zoom conflicts. */
+  /* GSAP's ScrollTrigger `pin` (in flip.js) handles the actual
+     pinning — plain CSS position: sticky here stuck for as long as
+     .stage's *own* full height allowed, which ran noticeably longer
+     than the last card's own stick duration (confirmed live: the
+     heading was still pinned solid well after the last card had
+     already released and scrolled away). A hand-guessed pixel offset
+     to end a matching class-toggle at the "right" point *also* missed
+     (confirmed: the spacer's own position when the card released
+     wasn't anywhere near the offset the math assumed) — GSAP's pin
+     measures real element positions at refresh time instead of
+     guessing, so it can't drift out of sync with the actual layout. */
   .p2-heading {
     position: static;
     left: auto; top: auto;
     width: auto;
     align-self: stretch;
+    z-index: 20;
+    background: var(--bg);
+    padding-bottom: 6px;
   }
 
+  /* position: sticky needs every ancestor's overflow to stay visible —
+     .panel and .stage-wrapper are overflow: hidden by default
+     (relied on elsewhere to clip oversized decorative backgrounds),
+     so panel-2 specifically opts out of that. */
+  #panel-2, #panel-2 .stage-wrapper {
+    overflow: visible;
+  }
+  /* the background vector pattern and corner stars no longer fit
+     sensibly *inside* .stage once .stage is many thousands of px tall
+     (one card's worth of scroll room each) — pinned to the viewport
+     instead so they read as a constant backdrop/corner accents behind
+     the whole scrolling stack, not one faint smudge wherever .stage's
+     midpoint happens to land. */
+  #panel-2 .vector-wrap {
+    position: fixed;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  #panel-2 .p2-star { position: fixed; }
+
   .carousel {
-    position: relative;
+    position: static;
     left: auto; top: auto;
     align-self: stretch;
     width: auto;
-    /* stop the browser's own pinch/double-tap zoom from fighting with
-       the custom swipe handling here — a held/lingering touch could get
-       misread as a zoom gesture, which looked like "the card keeps
-       growing". pan-y keeps normal vertical page scroll working, it
-       just stops this element from being treated as a zoom/pan-x
-       target. */
-    touch-action: pan-y;
-    /* focused card's real height, now taller since the "Read more" CTA
-       sits stacked below the subtitle (not beside the title) — this box
-       height is what the "1/8" pill's gap is measured from (the card
-       itself is position:absolute so it doesn't otherwise contribute to
-       this box's height), so it must match the real card height or the
-       card visually overflows past this box and collides with the
-       heading above / pill below. Sized with headroom above the
-       measured ~104vw so slightly taller text rendering (font
-       fallback/metrics) doesn't reopen the overlap. */
-    height: 112vw;
+    height: auto;
     margin-top: 24px; /* consistent heading->content gap, Work through Contact */
   }
+  .carousel__stage {
+    position: static;
+    display: block;
+  }
+  /* gives the LAST card actual trailing sibling content to stick
+     against — container padding-bottom was tried first and measured
+     to NOT work (the last card just scrolled straight through top:
+     90px, never pinning, confirmed via getBoundingClientRect() across
+     the whole scroll range). ~520px card height + 28px margin, so it
+     gets roughly the same dwell time as every other card. */
+  .pcard-stack-spacer { display: block; height: 100px; }
 
-  /* the mobile design's cards sit in a plain, evenly-spaced, non-tilted
-     row (unlike desktop's arced/rotated coverflow) but it's still an
-     infinite loop — there are always neighbours peeking on both sides,
-     including wrapping past the first/last card. carousel.js drives
-     this with a discrete current-index model (not desktop's continuous
-     phase) using the frame's REAL card widths (204px side / 232px
-     focused, i.e. 56.67vw / 64.44vw) and a flat 16px gap — a
-     scale-transform approach can't produce an exact flat gap once the
-     centre card is a different size, which is what caused the
-     oversized gaps before. */
-  .pcard { width: 56.67vw; }
-  /* the centred card is noticeably bigger, not just tinted — carousel.js
-     drives the actual scale via inline transform; this is just the
-     shared base size neighbours sit at */
-  /* Side cards show 1 line, the focused card up to 2 — driven by
-     max-height, not by toggling white-space/line-clamp/display. Those
-     are discrete (can't animate), so flipping them in step with the
-     .35s width transition made the text visibly snap/reflow mid-motion.
-     max-height genuinely animates: text always wraps normally, and the
-     box just clips to ~1 line at rest, transitioning open to ~2 lines'
-     worth on focus — one continuous glide together with the width
-     transition, no JS timing hack needed. Trade-off: no "…" ellipsis
-     marker on the clipped line (max-height clipping can't combine with
-     line-clamp's ellipsis) — the second line is just fully hidden. */
+  .pcard {
+    position: sticky;
+    top: 129px; /* pinned .p2-heading (top:28px) ends ~105px + a real 24px gap */
+    left: auto;
+    width: 82vw;
+    max-width: 360px;
+    margin: 0 auto 43px; /* visible peek ~= margin - 13px (measured: 28->15, 15->2, 22->9); targeting ~30px visible, up from the original 15px */
+    transform-origin: center top;
+    /* lighter than the desktop-inherited shadow — with up to 8 cards
+       stacked (the ones underneath are hidden but still rendered),
+       identical shadows compound into a much heavier, thicker-looking
+       edge than any single card was designed for */
+    box-shadow: 0 10px 20px -12px rgba(20, 26, 50, 0.35);
+  }
+  /* subtle alternating tilt, like a loosely stacked pile of polaroids —
+     deliberately not identical card to card, but never more than a few
+     degrees so it reads as tidy rather than messy. First card stays
+     perfectly straight (0deg) — reads as the "top of the deck" landing
+     squarely before the rest fan out underneath it. */
+  .pcard:nth-child(1) { transform: rotate(0deg); }
+  .pcard:nth-child(2) { transform: rotate(3deg); }
+  .pcard:nth-child(3) { transform: rotate(-3deg); }
+  .pcard:nth-child(4) { transform: rotate(2deg); }
+  .pcard:nth-child(5) { transform: rotate(-4deg); }
+  .pcard:nth-child(6) { transform: rotate(3deg); }
+  .pcard:nth-child(7) { transform: rotate(-2deg); }
+  .pcard:nth-child(8) { transform: rotate(4deg); }
+  /* later cards need a higher stacking order so they visibly cover the
+     earlier ones as they scroll into the shared sticky position */
+  .pcard:nth-child(1) { z-index: 1; }
+  .pcard:nth-child(2) { z-index: 2; }
+  .pcard:nth-child(3) { z-index: 3; }
+  .pcard:nth-child(4) { z-index: 4; }
+  .pcard:nth-child(5) { z-index: 5; }
+  .pcard:nth-child(6) { z-index: 6; }
+  .pcard:nth-child(7) { z-index: 7; }
+  .pcard:nth-child(8) { z-index: 8; }
+
   .pcard__cap h3 {
     font-size: 17px;
-    /* Oswald's glyphs need more vertical room than any *numeric*
-       line-height leaves them — 1.05, 1.2, 1.3 were all tried and every
-       one left a several-px gap between the box's own height and what
-       the glyphs actually need (verified via scrollHeight), so the tops
-       of letters were getting sliced by overflow: hidden. `normal`
-       (the browser/font's own calculated line-height) is the one value
-       that actually measured clean — box height matched scrollHeight
-       with ~0 gap. max-height below is that measured height + a
-       small buffer, not a line-height multiple. */
     line-height: normal;
     overflow: hidden;
     white-space: normal;
-    max-height: 27px;
-    transition: max-height .35s ease;
+    max-height: 52px; /* room for up to 2 lines, always shown now */
   }
-  .pcard.is-focus .pcard__cap h3 { max-height: 52px; }
   .pcard__cap p { font-size: 14px; margin-top: 4px; }
 
-  /* focus affordance: a "Read more" button on the front-most card only,
-     so it's clear that's the one you can tap — title itself stays
-     plain ink, not desktop's green-tinted hover color. Stacked BELOW
-     the company/subtitle line (not between title and subtitle) — the
-     button is nested inside .pcard__row alongside the h3 in markup,
-     but the subtitle <p> is a sibling of .pcard__row, so getting the
+  /* every card always shows its title/subtitle/button in this order —
+     the button's markup sits inside .pcard__row alongside the h3, but
+     the subtitle <p> is a sibling of .pcard__row, so getting the
      button to render AFTER the <p> needs .pcard__row to stop being its
      own box: `display: contents` unwraps it so h3/arrow become direct
      flex items of .pcard__cap right alongside <p>, and `order` then
      puts them in the real visual sequence: title, subtitle, button. */
-  .pcard.is-focus .pcard__cap h3 { color: var(--ink); }
   .pcard__cap { display: flex; flex-direction: column; }
   .pcard__row { display: contents; }
   .pcard__cap h3 { order: 1; }
   .pcard__cap p { order: 2; }
-  /* Collapsed via max-height: 0 (not display: none) so it can animate
-     open — border-box sizing means padding collapses along with it, so
-     side cards still get zero dead space, same as display:none did,
-     but now the "Read more" button grows in smoothly instead of
-     popping, in step with the title's own max-height reveal. */
   .pcard__arrow {
     order: 3;
-    margin-top: 0;
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    pointer-events: none;
+    margin-top: 12px;
+    opacity: 1;
+    /* the base (desktop) rule defaults to transform: scale(0.2) — only
+       .is-focus grows it to scale(1), and mobile cards never get
+       .is-focus anymore (every card always shows full content now),
+       so without this override every "Read more" button was rendering
+       at 20% size, effectively invisible. */
+    transform: none;
     width: auto;
     height: auto;
     display: flex;
@@ -1310,20 +1348,6 @@ body.js-flip .panel {
     padding: 9px 16px;
     gap: 6px;
     flex-shrink: 0;
-    transition: max-height .35s ease, opacity .3s ease, margin-top .35s ease;
-  }
-  .pcard.is-focus .pcard__arrow {
-    margin-top: 12px;
-    max-height: 48px;
-    opacity: 1;
-    pointer-events: auto;
-    /* re-assert against the desktop is-focus rule (width: 24px;
-       margin-left: 8px) — that rule is a plain .pcard.is-focus
-       .pcard__arrow selector too, same specificity, so without this
-       explicit reset here it was winning on mobile as well and
-       shrinking the "Read more" button down to a 24px circle. */
-    width: auto;
-    margin-left: 0;
   }
   .pcard__cta-text {
     display: inline;
@@ -1335,27 +1359,11 @@ body.js-flip .panel {
     white-space: nowrap;
   }
 
-  /* arrow buttons -> a "current/total" counter pill below the carousel
-     instead of one dot per card */
+  /* no more "1 of 8" counter — that only made sense for a single
+     focused slot cycling through cards; a scrollable stack doesn't
+     have a clean equivalent, so it's just dropped rather than faked */
   .carousel__nav { display: none; }
-  .carousel__dots {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px; /* 16px + 4px nudge down */
-  }
-  .carousel__counter {
-    display: flex;
-    align-items: baseline;
-    gap: 2px;
-    padding: 6px 16px;
-    border-radius: 999px;
-    background: #6e7b59;
-    color: #fff;
-    font-family: 'Oswald', sans-serif;
-    font-weight: 600;
-    font-size: 14px;
-    letter-spacing: 0.02em;
-  }
+  .carousel__dots { display: none; }
 
   /* ---------------- Panel 3 — Meet Sreejita ---------------- */
   /* the flattened desc-card image is dropped on mobile in favour of

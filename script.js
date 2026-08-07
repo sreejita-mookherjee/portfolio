@@ -133,7 +133,14 @@
 
   pdfCards.forEach(function (card, idx) {
     card.addEventListener('click', function () {
-      if (!card.classList.contains('is-focus')) return;
+      var mobile = window.matchMedia('(max-width: 860px)').matches;
+      /* the is-focus gate only matters on desktop, to stop a click
+         landing on a background/side card mid-hover-fan. Mobile cards
+         are a plain scrolling stack now (see styles.css/carousel.js —
+         the old touch-swipe carousel that set is-focus is gone), so
+         every mobile card is equally "current" and tappable; gating on
+         a class that's never set there would silently break every tap. */
+      if (!mobile && !card.classList.contains('is-focus')) return;
       /* Chrome on Android (and some other mobile browsers) doesn't
          render PDFs inline inside an <iframe> the way desktop
          Chrome/Firefox/Safari do — it just shows a bare "poc.pdf ·
@@ -142,7 +149,7 @@
          skip the modal on mobile entirely and open the PDF directly in
          a new tab, where the browser's own full-page PDF viewer (which
          DOES work) takes over. */
-      if (window.matchMedia('(max-width: 860px)').matches) {
+      if (mobile) {
         window.open(card.dataset.pdf, '_blank');
         return;
       }
