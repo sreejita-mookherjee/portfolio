@@ -34,6 +34,27 @@
   }
   function setActiveDot(i) { dots.forEach((d, di) => d.classList.toggle("is-active", di === i)); }
 
+  /* Nav-dot jumps: the browser's native smooth-scroll (behavior:
+     "smooth") takes roughly the same wall-clock time regardless of
+     distance, which made multi-panel jumps play the scroll-scrubbed
+     flip animation abnormally fast — 3 panels' worth of flip crammed
+     into the same duration a single-panel jump gets. Animating the
+     scroll ourselves instead lets duration scale with distance, so a
+     bigger jump takes proportionally longer and the flip always reads
+     at roughly the same rate no matter how many panels it's skipping. */
+  function animatedScrollTo(target) {
+    const startY = window.scrollY || window.pageYOffset;
+    const distance = Math.abs(target - startY);
+    const duration = Math.min(1.6, Math.max(0.45, distance / 1400));
+    const state = { y: startY };
+    gsap.to(state, {
+      y: target,
+      duration,
+      ease: "power2.inOut",
+      onUpdate: () => window.scrollTo(0, state.y)
+    });
+  }
+
   const mm = gsap.matchMedia();
 
   /* ---------- WIDE SCREENS: page-flip ---------- */
@@ -99,7 +120,7 @@
         const i = parseInt(dot.dataset.go, 10);
         const st = tl.scrollTrigger;
         const target = st.start + (st.end - st.start) * (i / (N - 1));
-        window.scrollTo({ top: target, behavior: "smooth" });
+        animatedScrollTo(target);
       });
     });
 
@@ -116,7 +137,7 @@
     dots.forEach((dot) => {
       dot.addEventListener("click", () => {
         const i = parseInt(dot.dataset.go, 10);
-        window.scrollTo({ top: panels[i].offsetTop, behavior: "smooth" });
+        animatedScrollTo(panels[i].offsetTop);
       });
     });
     panels.forEach((panel, i) => {

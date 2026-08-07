@@ -394,7 +394,7 @@ body.js-flip .panel {
 .pcard {
   position: absolute; left: 50%; top: 50%;
   width: 272px;
-  background: #fff; padding: 16px; border-radius: 5px;
+  background: #fff; padding: 16px; border-radius: 0; /* sharp corners, matching the cut-paper/polaroid look everywhere else */
   box-shadow: 0 22px 45px -20px rgba(20, 26, 50, 0.55);
   transform: translate(-50%, -50%);
   will-change: transform, opacity; cursor: pointer; user-select: none;
@@ -1278,6 +1278,17 @@ body.js-flip .panel {
     max-width: 360px;
     margin: 0 auto 43px; /* visible peek ~= margin - 13px (measured: 28->15, 15->2, 22->9); targeting ~30px visible, up from the original 15px */
     transform-origin: center top;
+    /* position: sticky + a CSS transform (the rotation below) on the
+       same element is a known class of browser rendering glitch —
+       during scroll, the sticky recalculation can momentarily clip the
+       element to its un-rotated bounding box for a single frame before
+       repainting the transform correctly, which reads as a corner
+       getting "cut" (confirmed: a screenshot caught it happening on
+       the rotated top-left corner specifically, intermittently).
+       Promoting the card to its own GPU layer ahead of time avoids the
+       recalculation glitch entirely. */
+    will-change: transform;
+    backface-visibility: hidden;
     /* lighter than the desktop-inherited shadow — with up to 8 cards
        stacked (the ones underneath are hidden but still rendered),
        identical shadows compound into a much heavier, thicker-looking
