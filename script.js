@@ -134,13 +134,16 @@
   pdfCards.forEach(function (card, idx) {
     card.addEventListener('click', function () {
       var mobile = window.matchMedia('(max-width: 860px)').matches;
-      /* the is-focus gate only matters on desktop, to stop a click
-         landing on a background/side card mid-hover-fan. Mobile cards
-         are a plain scrolling stack now (see styles.css/carousel.js —
-         the old touch-swipe carousel that set is-focus is gone), so
-         every mobile card is equally "current" and tappable; gating on
-         a class that's never set there would silently break every tap. */
-      if (!mobile && !card.classList.contains('is-focus')) return;
+      /* Used to require .is-focus on desktop too, to stop a click
+         landing on a background/side card mid-hover-fan — but there's
+         no drag/swipe gesture on desktop the way there is on touch, so
+         that gate wasn't preventing anything real. It was only causing
+         confusion: clicking a card that wasn't currently centered did
+         nothing at all, silently, with no feedback — looked broken
+         (confirmed: a user had to notice it only worked on the
+         front-most card and pre-navigate with the arrows first). Any
+         card with a data-pdf now opens directly on click, focused or
+         not, on both platforms. */
       /* Chrome on Android (and some other mobile browsers) doesn't
          render PDFs inline inside an <iframe> the way desktop
          Chrome/Firefox/Safari do — it just shows a bare "poc.pdf ·
