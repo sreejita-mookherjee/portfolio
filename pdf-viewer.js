@@ -347,10 +347,23 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     }
     viewport.scrollTop = 0;
     wireScrollSpy();
-    warmUp(pdf).then(function () {
-      if (myToken !== state.renderToken) return;
+    /* warmUp only ever needs to run once per actual document load — the
+       race it's guarding against is specific to a document's FIRST
+       render right after loading, not to "reopening the modal." It was
+       running unconditionally on every open, including reopens of an
+       already-cached doc, adding its up-to-800ms wait every single
+       time for no benefit the second time onward. Tagging the doc
+       object itself once it's been through warm-up skips it for every
+       subsequent reopen of that same file this session. */
+    if (pdf.__warmed) {
       layoutForBreakpoint();
-    });
+    } else {
+      warmUp(pdf).then(function () {
+        pdf.__warmed = true;
+        if (myToken !== state.renderToken) return;
+        layoutForBreakpoint();
+      });
+    }
   }
 
   function loadPdf(url, title) {
