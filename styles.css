@@ -1267,21 +1267,19 @@ body.js-flip .panel {
      instead so they read as a constant backdrop/corner accents behind
      the whole scrolling stack, not one faint smudge wherever .stage's
      midpoint happens to land. */
-  /* fixed positioning alone isn't scoped to panel-2 — a fixed element
-     paints on top of whatever section the viewport is actually showing,
-     so without this it also rendered (a second, duplicate-looking
-     vector) over the hero, Meet Sreejita, etc. the whole time. Gated on
-     a body class flip.js toggles based on panel-2's own ScrollTrigger
-     (visible only while panel-2 is genuinely the active section). */
-  #panel-2 .vector-wrap {
-    position: fixed;
-    left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
-    visibility: hidden;
-  }
-  #panel-2 .p2-star { position: fixed; visibility: hidden; }
+  /* position: sticky was tried here (a fixed element leaking into the
+     hero was reported on a real phone) but sticky elements, unlike
+     fixed ones, still occupy their own real width/height in normal
+     document flow — this element's is sizable, so it opened up a big
+     empty gap between Home and Selected Work. Back to fixed, but with
+     the hide mechanism hardened from visibility:hidden to display:none
+     — display:none is a more absolute removal from rendering (no GPU
+     layer to even exist), in case the flakiness was specifically a
+     fixed + visibility interaction on that phone's browser. */
+  #panel-2 .vector-wrap { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; }
+  #panel-2 .p2-star { position: fixed; display: none; }
   body.is-work-active #panel-2 .vector-wrap,
-  body.is-work-active #panel-2 .p2-star { visibility: visible; }
+  body.is-work-active #panel-2 .p2-star { display: block; }
 
   .carousel {
     position: static;
@@ -1533,6 +1531,12 @@ body.js-flip .panel {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 10px 14px;
   background: #262626;
+  /* the actual, reliable fix for "pinch-zoom zooms the fixed header
+     too" — touch-action is a browser-native directive that a pinch
+     gesture starting on this element shouldn't trigger any default
+     handling (zoom included), unlike relying only on JS preventDefault
+     (which some mobile browsers recognize the gesture ahead of). */
+  touch-action: none;
 }
 .pdf-overlay__title {
   font-family: 'Oswald', sans-serif;
@@ -1579,6 +1583,12 @@ body.js-flip .panel {
      without fighting the scroll itself. */
   scroll-snap-type: y proximity;
   background: #ece7dd;
+  /* allows native single-finger scrolling in both directions (needed —
+     zoomed-in content can scroll horizontally too) while specifically
+     excluding native pinch-zoom, which isn't one of the pan gestures
+     this lists — the custom two-finger pinch handler (in pdf-viewer.js)
+     is what handles zoom here instead, scoped to just this content. */
+  touch-action: pan-x pan-y;
 }
 /* hand tool — only meaningful once zoomed in (is-zoomed, toggled in
    setZoom); grabbing while actively dragging (is-panning) */
@@ -1624,10 +1634,14 @@ body.js-flip .panel {
 }
 .pdf-overlay__pagecount[hidden] { display: none; }
 
-/* desktop-only manual zoom — mobile relies on native pinch-zoom instead
-   (see the gesture-blocking note in pdf-viewer.js for why the two can't
-   coexist as separate controls there), so this whole cluster is hidden
-   on mobile below. */
+/* Manual zoom — shown on both breakpoints now. Mobile ALSO gets a
+   custom pinch gesture (see pdf-viewer.js), but pinch alone turned out
+   unreliable to get right across real devices from here (still not
+   working as of last check, despite passing every test this sandbox
+   could run) — buttons are the one zoom path proven to actually work,
+   so they're the guaranteed fallback here, not just a desktop nicety.
+   Bumped up in size a bit from the desktop version for a comfortable
+   touch target. */
 .pdf-overlay__zoom {
   position: absolute;
   right: 14px; bottom: 14px;
@@ -1648,7 +1662,9 @@ body.js-flip .panel {
 .pdf-overlay__zoombtn svg { width: 15px; height: 15px; display: block; }
 
 @media (max-width: 860px) {
-  .pdf-overlay__zoom { display: none; }
+  .pdf-overlay__zoom { bottom: max(14px, env(safe-area-inset-bottom)); }
+  .pdf-overlay__zoombtn { width: 38px; height: 38px; } /* bigger touch target than the desktop 30px */
+  .pdf-overlay__zoombtn svg { width: 17px; height: 17px; }
   /* full-bleed "inner page" instead of a floating dialog. Pinned to the
      top-left (not centered) — centering a 100dvh/100svh panel inside a
      plain inset:0 backdrop left a sliver of the backdrop showing above

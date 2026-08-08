@@ -129,6 +129,15 @@ function initCarousel() {
   gsap.ticker.add(() => {
     const now = performance.now();
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    /* pdf-viewer.js sets this while its modal is open. Without it, the
+       ring keeps auto-orbiting behind the modal, so whichever card was
+       front-and-center when you clicked has physically rotated away by
+       the time you close it — you never land back on the same one,
+       even though the modal itself correctly scrolls back to that
+       card's DOM element (the ring under it has simply moved). Freezing
+       phase (and skipping the render/focus updates, since nothing's
+       changed) keeps the ring exactly as you left it. */
+    if (window.__pdfModalOpen) return;
     if (hovering) {
       phase += (phaseTarget - phase) * Math.min(1, dt * 6);   // ease to snapped/arrowed target
     } else if (!reduce) {

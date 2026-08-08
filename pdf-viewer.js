@@ -51,7 +51,6 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     renderToken: 0,         // bumped on every open/close/resize to cancel stale in-flight renders
     pageObserver: null,     // drives the page-count pill off real scroll position
     lazyObserver: null,     // triggers each page's render as it nears the viewport
-    visibleCanvases: [],    // canvases the lazy observer currently considers near/in view — used to re-render the right ones on zoom/resize
     renderQueue: [],        // pending {canvas, idx} pairs, drained one at a time
     queueRunning: false,
     zoom: 1                 // manual in-app zoom — see setZoom()
@@ -65,7 +64,6 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
   function clearPages() {
     if (state.pageObserver) { state.pageObserver.disconnect(); state.pageObserver = null; }
     if (state.lazyObserver) { state.lazyObserver.disconnect(); state.lazyObserver = null; }
-    state.visibleCanvases = [];
     state.renderQueue = [];
     state.queueRunning = false;
     pagesWrap.innerHTML = '';
@@ -184,18 +182,11 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
      "render everything immediately" and reintroducing the original bug. */
   function wireLazyRender() {
     if (state.lazyObserver) state.lazyObserver.disconnect();
-    state.visibleCanvases = [];
     state.lazyObserver = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
         var idx = state.canvases.indexOf(e.target);
-        if (idx < 0) return;
-        if (e.isIntersecting) {
-          if (state.visibleCanvases.indexOf(e.target) < 0) state.visibleCanvases.push(e.target);
-          queueRender(e.target, idx);
-        } else {
-          var vi = state.visibleCanvases.indexOf(e.target);
-          if (vi >= 0) state.visibleCanvases.splice(vi, 1);
-        }
+        if (idx >= 0) queueRender(e.target, idx);
       });
     }, { root: viewport, rootMargin: '60% 0px' });
     state.canvases.forEach(function (c) { state.lazyObserver.observe(c); });
@@ -212,27 +203,58 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     if (state.canvases[0]) queueRender(state.canvases[0], 0);
   }
 
-  /* Desktop-only manual zoom (mobile has native pinch-zoom instead — see
-     the gesture-blocking note further down). Re-renders the actual PDF
-     content at the new size rather than CSS-stretching the existing
-     canvases, so it stays crisp at any step instead of just the first
-     ZOOM_HEADROOM multiple. Keeps roughly the same scroll position
-     (by ratio, not by pixel) across the resize so zooming in doesn't
-     throw you back to the top of the deck. */
+  /* Shared zoom commit path — desktop's buttons/ctrl-wheel and mobile's
+     pinch (see the touch handlers further down) both funnel into this.
+     Re-renders the actual PDF content at the new size rather than
+     CSS-stretching the existing canvases, so it stays crisp at any
+     step instead of just the first ZOOM_HEADROOM multiple. Keeps
+     roughly the same scroll position (by ratio, not by pixel) across
+     the resize so zooming in doesn't throw you back to the top of the
+     deck. */
+  /* Computed directly via geometry rather than read off
+     state.visibleCanvases (the IntersectionObserver-maintained list) —
+     zoom can commit at any arbitrary moment mid-gesture, and querying
+     actual bounding boxes needs no observer round-trip to be correct,
+     so there's no dependency on the observer having already caught up
+     right at that instant. */
+  function getCurrentlyVisibleCanvases() {
+    var vpRect = viewport.getBoundingClientRect();
+    return state.canvases.filter(function (c) {
+      var r = c.getBoundingClientRect();
+      return r.bottom > vpRect.top && r.top < vpRect.bottom && r.right > vpRect.left && r.left < vpRect.right;
+    });
+  }
   function setZoom(next) {
     var clamped = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, next));
     if (clamped === state.zoom) return;
     var scrollable = viewport.scrollHeight - viewport.clientHeight;
     var ratio = scrollable > 0 ? viewport.scrollTop / scrollable : 0;
+    var zoomRatio = clamped / state.zoom;
     state.zoom = clamped;
     var myToken = state.renderToken;
     /* every page's scale changed, so every canvas needs a re-render
        eventually — but only re-render the ones actually on screen right
        now immediately; the rest just fall back to unrendered and pick
        up the new zoom lazily via wireLazyRender() whenever they're
-       next scrolled near, same as a first-time render. */
-    var toRerenderNow = state.visibleCanvases.slice();
-    state.canvases.forEach(function (c) { delete c.dataset.rendered; delete c.dataset.queued; });
+       next scrolled near, same as a first-time render.
+       That's fine for the BITMAP (a page you scroll to later can afford
+       to render fresh then) but their CSS display size was being left
+       alone in the meantime — a slide zoomed in, then back out, kept
+       showing at its old (zoomed) size until you actually scrolled to
+       it and a fresh render finally corrected it. Rescaling every
+       canvas's existing width/height by the zoom ratio right away fixes
+       the size instantly (a plain CSS stretch of the old bitmap, soft
+       until the real crisp redraw lands) instead of leaving it stuck at
+       the previous zoom level for however long that takes. */
+    var toRerenderNow = getCurrentlyVisibleCanvases();
+    state.canvases.forEach(function (c) {
+      delete c.dataset.rendered;
+      delete c.dataset.queued;
+      if (c.style.width) {
+        c.style.width = (parseFloat(c.style.width) * zoomRatio) + 'px';
+        c.style.height = (parseFloat(c.style.height) * zoomRatio) + 'px';
+      }
+    });
     var waits = toRerenderNow.map(function (c) {
       var idx = state.canvases.indexOf(c);
       return idx >= 0 ? queueRender(c, idx) : Promise.resolve();
@@ -254,6 +276,16 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
      active while state.zoom > 1 (the is-zoomed class, toggled in
      setZoom, is what actually shows the grab cursor — see the CSS). */
   var panState = null;
+  /* A native "click" fires on whatever element the mouse is over at
+     mouseup, regardless of how far it moved since mousedown — dragging
+     to pan and happening to release outside the panel (over the
+     backdrop) was firing the backdrop's click-to-close, closing the
+     viewer on an accidental drag rather than an actual click on the
+     backdrop. justPanned swallows that one trailing click; the
+     setTimeout(...,0) resets it on the next tick, after the click
+     (which fires synchronously right after mouseup, same tick) has
+     already been suppressed. */
+  var justPanned = false;
   viewport.addEventListener('mousedown', function (e) {
     if (state.isMobile || state.zoom <= 1) return;
     panState = { x: e.clientX, y: e.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
@@ -269,6 +301,8 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     if (!panState) return;
     panState = null;
     viewport.classList.remove('is-panning');
+    justPanned = true;
+    setTimeout(function () { justPanned = false; }, 0);
   });
 
   /* pdf.js has a real, upstream, timing-related bug where the very
@@ -347,65 +381,109 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     });
   }
 
+  /* Locks background scrolling while the modal is open WITHOUT touching
+     body's own CSS (position/overflow) — that used to be a plain
+     `body.style.overflow = 'hidden'`, but Selected Work's desktop
+     layout is actively pinned via a GSAP ScrollTrigger, and toggling
+     overflow on body mid-pin was reported shifting that section's
+     content upward once the modal closed (a real, confirmed reflow
+     side-effect, not imagined). Intercepting the scroll-causing events
+     directly instead — and only for ones that didn't originate inside
+     the modal itself, so the PDF viewport keeps scrolling/zooming
+     normally — never touches body's box model at all, so there's
+     nothing for GSAP's pin math to get out of sync with. */
+  function blockBackgroundScroll(e) {
+    if (overlay.contains(e.target)) return;
+    e.preventDefault();
+  }
+  function lockScroll() {
+    document.addEventListener('wheel', blockBackgroundScroll, { passive: false });
+    document.addEventListener('touchmove', blockBackgroundScroll, { passive: false });
+  }
+  function unlockScroll() {
+    document.removeEventListener('wheel', blockBackgroundScroll, { passive: false });
+    document.removeEventListener('touchmove', blockBackgroundScroll, { passive: false });
+  }
+
   var openedFromCard = null;
   function open(card) {
     var h3 = card.querySelector('h3');
     openedFromCard = card;
     overlay.classList.add('is-open');
-    document.body.style.overflow = 'hidden';
+    lockScroll();
+    /* The desktop coverflow ring keeps auto-orbiting via its own
+       gsap.ticker loop (carousel.js) regardless of what else is on
+       screen — it was never told the modal exists. Left running, the
+       card that was "front and center" when you clicked has physically
+       rotated away by the time you close the modal, so you never land
+       back on the same one visually even though openedFromCard.
+       scrollIntoView (below) is scrolling to the right DOM element —
+       the ring itself has moved under it. carousel.js checks this flag
+       every tick and freezes in place while it's set. */
+    window.__pdfModalOpen = true;
+    /* Without this, Android's hardware/gesture back button doesn't
+       close the modal — it just runs the browser's normal back
+       navigation, which (since opening the modal never left this page)
+       exits the site entirely. Pushing a history entry when the modal
+       opens means "back" has something of ours to pop first; the
+       popstate listener below intercepts that pop and closes the modal
+       instead of letting the navigation continue. */
+    history.pushState({ pdfModal: true }, '', location.href);
     loadPdf(card.dataset.pdf, h3 ? h3.textContent : '');
   }
-  /* Returning to the exact card you opened — not just "wherever the
-     page happens to have scrolled to" — matters most on mobile, where
-     the card stack sits inside a very tall pinned/sticky section;
+  /* Returning to the exact card you opened matters on MOBILE, where the
+     card stack sits inside a very tall, normal-document-flow section —
      losing your place there means scrolling back through everything to
-     find it again. scrollIntoView on the actual card element (rather
-     than restoring a saved pixel offset) stays correct even if
-     something on the page reflowed while the modal was open. "instant"
-     avoids a jarring animated scroll right as the modal itself is
-     closing. */
-  function close() {
+     find it again, and scrollIntoView on the actual card element stays
+     correct there even if something reflowed while the modal was open.
+
+     Deliberately NOT done on desktop — confirmed causing the exact
+     "just opening and closing pushes the page up" bug. Desktop's
+     Selected Work is a GSAP-pinned, scroll-scrubbed flip animation
+     where panels are absolutely positioned, not laid out in normal
+     flow; scrollIntoView's target-position math assumes normal flow
+     and was resolving to the wrong place there. It's also simply not
+     needed on desktop: nothing in this whole open/close flow changes
+     window scrollY while the modal is up (background scroll is
+     blocked, not redirected), so the page is already exactly where it
+     was the moment you close it — there's nothing to restore. */
+  function close(viaPopstate) {
     state.renderToken++; // cancels any render still in flight
     overlay.classList.remove('is-open');
-    document.body.style.overflow = '';
+    unlockScroll();
+    window.__pdfModalOpen = false;
     if (openedFromCard) {
-      openedFromCard.scrollIntoView({ block: 'center', behavior: 'instant' });
+      if (state.isMobile) openedFromCard.scrollIntoView({ block: 'center', behavior: 'instant' });
       openedFromCard = null;
     }
+    if (!viaPopstate && history.state && history.state.pdfModal) history.back();
   }
+  window.addEventListener('popstate', function () {
+    if (overlay.classList.contains('is-open')) close(true);
+  });
 
   pdfCards.forEach(function (card) {
     card.addEventListener('click', function () { open(card); });
   });
-  closeBtn.addEventListener('click', close);
+  closeBtn.addEventListener('click', function () { close(false); });
   if (zoomInBtn) zoomInBtn.addEventListener('click', function () { setZoom(state.zoom + ZOOM_STEP); });
   if (zoomOutBtn) zoomOutBtn.addEventListener('click', function () { setZoom(state.zoom - ZOOM_STEP); });
-  overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+  overlay.addEventListener('click', function (e) { if (e.target === overlay && !justPanned) close(); });
   document.addEventListener('keydown', function (e) {
     if (!overlay.classList.contains('is-open')) return;
     if (e.key === 'Escape') close();
   });
-  /* Redirects the browser's own whole-PAGE zoom gesture into the in-app
-     zoom control instead, on DESKTOP only — Chrome/Firefox report a
-     trackpad pinch (or Ctrl+scroll) as a wheel event with ctrlKey true
-     (a synthetic flag Chrome sets specifically for pinch, not an actual
-     Ctrl keypress); desktop Safari fires WebKit-only gesture* events
-     instead. Previously this just called preventDefault and did
-     nothing else, which is exactly the "mouse zoom doesn't work"
-     complaint — blocking the browser's zoom without substituting our
-     own left the gesture feeling dead. Now it drives setZoom() instead,
-     so the physical gesture people already reach for actually works.
-     wheelZoomLocked debounces a single pinch/scroll gesture (which
-     fires many small wheel events) down to one zoom step.
-     Deliberately NOT applied on mobile: those same gesture* events are
-     also how iOS Safari reports a genuine two-finger pinch on a
-     touchscreen, and there's no separate signal to tell the two apart
-     — blocking one blocks both, so mobile keeps native pinch-zoom
-     instead (there's no custom in-app zoom control there the way
-     desktop has). NOTE: this can't (and, by design, shouldn't) block
-     zooming via an actual keyboard shortcut (Cmd/Ctrl +/-) — browsers
-     deliberately keep that user-initiated path un-blockable by page JS
-     for accessibility. */
+  /* ctrl+wheel/trackpad-pinch drives setZoom() directly — Chrome/Firefox
+     report that gesture as a wheel event with ctrlKey true. A leak
+     where this also zoomed the whole page (header included) was
+     reported once, but from Chrome DevTools' inspect/responsive mode
+     specifically, which doesn't always behave like a real browser
+     window for gesture handling — buttons stay available as a fallback
+     either way. wheelZoomLocked debounces a single gesture (which
+     fires many small wheel events) down to one zoom step. NOTE: this
+     can't (and, by design, shouldn't) block zooming via an actual
+     keyboard shortcut (Cmd/Ctrl +/-) — browsers deliberately keep that
+     user-initiated path un-blockable by page JS for accessibility. */
   var wheelZoomLocked = false;
   overlay.addEventListener('wheel', function (e) {
     if (!e.ctrlKey || state.isMobile) return;
@@ -415,8 +493,45 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     setZoom(state.zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
     setTimeout(function () { wheelZoomLocked = false; }, 220);
   }, { passive: false });
-  overlay.addEventListener('gesturestart', function (e) { if (!state.isMobile) e.preventDefault(); });
-  overlay.addEventListener('gesturechange', function (e) { if (!state.isMobile) e.preventDefault(); });
+  overlay.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+  overlay.addEventListener('gesturechange', function (e) { e.preventDefault(); });
+  /* Custom two-finger pinch, scoped to the content viewport only. Gives
+     live visual feedback via a cheap CSS transform while the fingers
+     are actually moving (no canvas re-render mid-gesture — pdf.js
+     render() calls are too slow to keep up with continuous pinch
+     deltas, and firing many in quick succession is exactly the kind of
+     overlap that's caused real render-race bugs elsewhere in this
+     file); commits to a real, crisp re-render via setZoom() only once
+     the gesture ends. */
+  var pinchState = null;
+  function touchDistance(touches) {
+    var dx = touches[0].clientX - touches[1].clientX;
+    var dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  viewport.addEventListener('touchstart', function (e) {
+    if (!state.isMobile || e.touches.length !== 2) return;
+    pinchState = { startDist: touchDistance(e.touches), startZoom: state.zoom };
+  }, { passive: true });
+  viewport.addEventListener('touchmove', function (e) {
+    if (!state.isMobile || e.touches.length !== 2) return;
+    e.preventDefault(); // blocks native pinch-zoom on Android Chrome specifically
+    if (!pinchState) return;
+    var factor = touchDistance(e.touches) / pinchState.startDist;
+    var preview = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, pinchState.startZoom * factor));
+    pagesWrap.style.transform = 'scale(' + (preview / state.zoom) + ')';
+    pagesWrap.dataset.pendingZoom = preview;
+  }, { passive: false });
+  function endPinch() {
+    if (!pinchState) return;
+    pinchState = null;
+    var pending = pagesWrap.dataset.pendingZoom;
+    pagesWrap.style.transform = '';
+    delete pagesWrap.dataset.pendingZoom;
+    if (pending) setZoom(parseFloat(pending));
+  }
+  viewport.addEventListener('touchend', function (e) { if (e.touches.length < 2) endPinch(); }, { passive: true });
+  viewport.addEventListener('touchcancel', endPinch, { passive: true });
   /* a resize (or a rotate on a real device) can cross the mobile
      breakpoint or just change how much room there is to fit a slide
      into — re-render whatever's currently visible at the new size
