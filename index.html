@@ -2,20 +2,20 @@
 <html lang="en">
 <head>
   <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-0ZFXKL6YER"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-0ZFXKL6YER"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
 
-  gtag('config', 'G-0ZFXKL6YER');
-</script>
+    gtag('config', 'G-0ZFXKL6YER');
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sreejita Mookherjee — Portfolio</title>
   <link rel="icon" type="image/png" href="assets/avatar.png">
   <link rel="apple-touch-icon" href="assets/avatar.png">
-  <link rel="stylesheet" href="styles.css?v=133">
+  <link rel="stylesheet" href="styles.css?v=136">
 </head>
 <body>
 
@@ -166,7 +166,7 @@
                 </div>
               </article>
 
-              <article class="pcard">
+              <article class="pcard" data-pdf="assets/p2/interactive-landing.pdf">
                 <img class="pcard__photo" src="assets/p2/unstop-landing.jpg?v=2" alt="Hiring platform landing page" loading="lazy" decoding="async" />
                 <div class="pcard__cap">
                   <div class="pcard__row">
@@ -180,11 +180,11 @@
                 </div>
               </article>
 
-              <article class="pcard">
+              <article class="pcard" data-pdf="assets/p2/hp-plans.pdf?v=2">
                 <img class="pcard__photo" src="assets/p2/hp-packages.jpg?v=2" alt="Housing Premium Packages" loading="lazy" decoding="async" />
                 <div class="pcard__cap">
                   <div class="pcard__row">
-                    <h3>Plans page</h3>
+                    <h3>Plans page redesign</h3>
                     <span class="pcard__arrow" aria-hidden="true">
                       <span class="pcard__cta-text">Read more</span>
                       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -496,6 +496,10 @@
        Nothing here hard-codes a page count or slide content: updating a
        case study is just replacing the PDF file at the same path. -->
   <div class="pdf-overlay" id="pdfOverlay" role="dialog" aria-modal="true" aria-label="Case study">
+    <!-- desktop-only — cycles through every project with a data-pdf without closing the modal -->
+    <button class="pdf-overlay__projnav pdf-overlay__projnav--prev" id="pdfOverlayProjPrev" type="button" aria-label="Previous project">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+    </button>
     <div class="pdf-overlay__panel">
       <div class="pdf-overlay__header">
         <span class="pdf-overlay__title" id="pdfOverlayTitle"></span>
@@ -506,6 +510,12 @@
       <div class="pdf-overlay__viewport" id="pdfOverlayViewport">
         <div class="pdf-overlay__pages" id="pdfOverlayPages"></div>
       </div>
+      <!-- sibling of the scrolling viewport (not inside it), same as the
+           zoom controls below — so it stays put over the top-right corner
+           instead of scrolling away with the PDF content -->
+      <button class="pdf-overlay__fullscreen" id="pdfOverlayFullscreen" type="button" aria-label="Open full screen in a new tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
+      </button>
       <span class="pdf-overlay__pagecount" id="pdfOverlayPageCount" hidden></span>
       <!-- desktop-only manual zoom (mobile gets native pinch-zoom instead) -->
       <div class="pdf-overlay__zoom" id="pdfOverlayZoom">
@@ -517,12 +527,15 @@
         </button>
       </div>
     </div>
+    <button class="pdf-overlay__projnav pdf-overlay__projnav--next" id="pdfOverlayProjNext" type="button" aria-label="Next project">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
   </div>
 
   <script src="assets/vendor/gsap.min.js"></script>
   <script src="assets/vendor/ScrollTrigger.min.js"></script>
   <script src="script.js?v=12"></script>
-  <script type="module" src="pdf-viewer.js?v=38"></script>
+  <script type="module" src="pdf-viewer.js?v=40"></script>
   <script src="carousel.js?v=14"></script>
   <script src="flip.js?v=11"></script>
   <script src="scroll-hint.js?v=3"></script>

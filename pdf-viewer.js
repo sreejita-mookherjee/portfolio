@@ -36,6 +36,9 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
   var pageCountEl = document.getElementById('pdfOverlayPageCount');
   var zoomInBtn = document.getElementById('pdfOverlayZoomIn');
   var zoomOutBtn = document.getElementById('pdfOverlayZoomOut');
+  var fullscreenBtn = document.getElementById('pdfOverlayFullscreen');
+  var projPrevBtn = document.getElementById('pdfOverlayProjPrev');
+  var projNextBtn = document.getElementById('pdfOverlayProjNext');
   if (!overlay || !pagesWrap) return;
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.mjs';
@@ -418,10 +421,24 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     document.removeEventListener('touchmove', blockBackgroundScroll, { passive: false });
   }
 
+  /* GA4 event for "a project was opened" — fires on the initial click
+     AND on switching via the project-nav arrows (both are, from the
+     visitor's side, "opening a project"). project_name is derived from
+     the PDF filename itself (stable, unaffected by title-copy edits or
+     cache-bust ?v= bumps) rather than the card's visible h3 text —
+     e.g. assets/p2/poc.pdf?v=2 -> "poc". Guarded on gtag existing so a
+     blocked/failed-to-load analytics script can't break the modal. */
+  function trackProjectClick(card) {
+    if (typeof gtag !== 'function' || !card || !card.dataset.pdf) return;
+    var slug = card.dataset.pdf.split('/').pop().split('?')[0].replace(/\.pdf$/i, '');
+    gtag('event', 'project_click', { project_name: slug });
+  }
+
   var openedFromCard = null;
   function open(card) {
     var h3 = card.querySelector('h3');
     openedFromCard = card;
+    trackProjectClick(card);
     overlay.classList.add('is-open');
     lockScroll();
     /* The desktop coverflow ring keeps auto-orbiting via its own
@@ -442,6 +459,21 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
        popstate listener below intercepts that pop and closes the modal
        instead of letting the navigation continue. */
     history.pushState({ pdfModal: true }, '', location.href);
+    loadPdf(card.dataset.pdf, h3 ? h3.textContent : '');
+  }
+  /* Desktop project-switching arrows (outside the panel) — reuses
+     loadPdf() directly rather than the full open(), since none of
+     open()'s one-time setup (history entry, scroll lock, freezing the
+     coverflow) needs to happen again; the modal's already open and
+     staying open, only the file changes. */
+  function switchProject(delta) {
+    if (pdfCards.length < 2) return;
+    var idx = pdfCards.indexOf(openedFromCard);
+    if (idx < 0) idx = 0;
+    var card = pdfCards[(idx + delta + pdfCards.length) % pdfCards.length];
+    var h3 = card.querySelector('h3');
+    openedFromCard = card;
+    trackProjectClick(card);
     loadPdf(card.dataset.pdf, h3 ? h3.textContent : '');
   }
   /* Returning to the exact card you opened matters on MOBILE, where the
@@ -481,6 +513,19 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
   closeBtn.addEventListener('click', function () { close(false); });
   if (zoomInBtn) zoomInBtn.addEventListener('click', function () { setZoom(state.zoom + ZOOM_STEP); });
   if (zoomOutBtn) zoomOutBtn.addEventListener('click', function () { setZoom(state.zoom - ZOOM_STEP); });
+  /* opens the raw PDF file in a new tab — the browser's own viewer
+     fills the whole window, which is the simplest, most reliable
+     "full screen" available without a custom fullscreen-API state to
+     keep in sync with the modal's own zoom/pan/page tracking. */
+  if (fullscreenBtn) fullscreenBtn.addEventListener('click', function () {
+    if (state.url) window.open(state.url, '_blank');
+  });
+  if (projPrevBtn) projPrevBtn.addEventListener('click', function () { switchProject(-1); });
+  if (projNextBtn) projNextBtn.addEventListener('click', function () { switchProject(1); });
+  if (pdfCards.length < 2) {
+    if (projPrevBtn) projPrevBtn.hidden = true;
+    if (projNextBtn) projNextBtn.hidden = true;
+  }
   overlay.addEventListener('click', function (e) { if (e.target === overlay && !justPanned) close(); });
   document.addEventListener('keydown', function (e) {
     if (!overlay.classList.contains('is-open')) return;

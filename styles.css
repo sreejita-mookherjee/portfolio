@@ -1508,6 +1508,7 @@ body.js-flip .panel {
   position: fixed; inset: 0; z-index: 700; /* above the mobile nav pill's 600 */
   display: none;
   align-items: center; justify-content: center;
+  gap: 18px; /* keeps the project-nav arrows close to the panel instead of pinned to the far screen edges */
   background: rgba(20, 20, 20, 0.6);
   padding: 40px;
 }
@@ -1559,6 +1560,52 @@ body.js-flip .panel {
 }
 .pdf-overlay__close:hover { color: #f4efe7; background: rgba(255, 255, 255, 0.1); }
 .pdf-overlay__close svg { width: 16px; height: 16px; display: block; }
+
+/* floats over the content viewport's top-right corner — same treatment
+   and same containing block (the panel, not the scrolling viewport) as
+   the zoom controls at bottom-right, so it stays put instead of
+   scrolling away with the PDF content or getting clipped by the
+   viewport's own overflow. `top` clears the header's height (its 10px
+   padding + 28px close-button row + 10px padding) plus a 14px gap;
+   env() keeps that correct on notched phones where the header grows
+   taller. Opens the raw PDF in a new tab so the browser's own
+   full-window viewer takes over (the simplest, most reliable "full
+   screen" there is — no custom fullscreen-API state to keep in sync
+   with anything else here) */
+.pdf-overlay__fullscreen {
+  position: absolute;
+  right: 14px;
+  top: calc(max(10px, env(safe-area-inset-top)) + 52px);
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(38, 38, 38, 0.5);
+  border: none;
+  color: #f4efe7;
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: background-color .2s ease;
+  z-index: 2;
+}
+.pdf-overlay__fullscreen:hover { background: rgba(38, 38, 38, 0.8); }
+.pdf-overlay__fullscreen svg { width: 15px; height: 15px; display: block; }
+
+/* desktop-only — cycles between projects without closing the modal. In
+   normal flex flow (not absolutely positioned) alongside the panel, so
+   they land right next to it with a small gap instead of pinned to the
+   far edges of the whole overlay, however wide the viewport is. */
+.pdf-overlay__projnav {
+  flex: 0 0 auto;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: #262626;
+  border: none;
+  color: #f4efe7;
+  display: grid; place-items: center;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.5);
+  transition: background-color .2s ease;
+}
+.pdf-overlay__projnav:hover { background: #3a3a3a; }
+.pdf-overlay__projnav[hidden] { display: none; }
+.pdf-overlay__projnav svg { width: 20px; height: 20px; display: block; }
 
 /* the pdf.js render target — every slide gets its own <canvas>, stacked
    vertically and scrolled through natively, same model on both
@@ -1665,6 +1712,9 @@ body.js-flip .panel {
   .pdf-overlay__zoom { bottom: max(14px, env(safe-area-inset-bottom)); }
   .pdf-overlay__zoombtn { width: 38px; height: 38px; } /* bigger touch target than the desktop 30px */
   .pdf-overlay__zoombtn svg { width: 17px; height: 17px; }
+  /* no room for these on a full-bleed mobile page — closing and picking
+     another card covers switching projects there */
+  .pdf-overlay__projnav { display: none; }
   /* full-bleed "inner page" instead of a floating dialog. Pinned to the
      top-left (not centered) — centering a 100dvh/100svh panel inside a
      plain inset:0 backdrop left a sliver of the backdrop showing above
