@@ -195,20 +195,26 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
 
      Each page is also raced against a timeout — pdf.js's render() can,
      separately and rarely, just never settle (confirmed here too, same
-     as the warm-up's version of this problem — and confirmed again on
-     a since-added dense/complex deck, waited 25+s with zero settlement).
-     Without a timeout, one stuck page would permanently block every
-     page queued after it. On timeout the stuck RenderTask is explicitly
-     .cancel()'d (releasing its claim on the canvas — pdf.js otherwise
-     refuses a second render() on the same canvas while one's still
-     "in progress") and given ONE retry on that same canvas before
-     giving up for good. A plain race with no cancel — the earlier
-     version of this — left a genuinely stuck page blank forever, with
-     no chance to recover on retry.
+     as the warm-up's version of this problem). Without a timeout, one
+     stuck page would permanently block every page queued after it. On
+     timeout the stuck RenderTask is explicitly .cancel()'d (releasing
+     its claim on the canvas — pdf.js otherwise refuses a second
+     render() on the same canvas while one's still "in progress") and
+     given ONE retry on that same canvas before giving up for good. A
+     plain race with no cancel — the earlier version of this — left a
+     genuinely stuck page blank forever, with no chance to recover on
+     retry.
+
+     9s (not a smaller value) specifically because some pages are just
+     legitimately heavy rather than actually stuck — a densely nested
+     Figma export (component-doc slides with 30+ nested Form XObjects)
+     was confirmed to genuinely finish given enough time, not hang
+     forever, but needed longer than a few seconds. A truly stuck page
+     still can't block the queue for more than 2x this either way.
 
      What gets INTO this queue is driven by wireLazyRender() below, not
      "every page, immediately" — see that function for why. */
-  var RENDER_TIMEOUT_MS = 4000;
+  var RENDER_TIMEOUT_MS = 9000;
   var RENDER_MAX_ATTEMPTS = 2;
   function queueRender(canvas, idx) {
     if (canvas.dataset.queued) return canvas.__renderPromise || Promise.resolve();
