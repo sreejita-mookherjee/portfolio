@@ -87,6 +87,8 @@
             if (idx === 1 && window.__carouselOnActive) window.__carouselOnActive();
             // hook: the "scroll to continue" hint only runs/shows while Home is active
             if (window.__scrollHintSetHome) window.__scrollHintSetHome(idx === 0);
+            // GA4: which panel actually settled into view
+            if (window.__trackSectionView) window.__trackSectionView(panels[idx].id);
           }
         }
       }
@@ -143,7 +145,12 @@
     panels.forEach((panel, i) => {
       ScrollTrigger.create({
         trigger: panel, start: "top center", end: "bottom center",
-        onToggle: (self) => { if (self.isActive) setActiveDot(i); }
+        onToggle: (self) => {
+          if (!self.isActive) return;
+          setActiveDot(i);
+          // GA4: which panel actually settled into view
+          if (window.__trackSectionView) window.__trackSectionView(panel.id);
+        }
       });
     });
     /* panel-2's decorative vector/stars are position: fixed (see the

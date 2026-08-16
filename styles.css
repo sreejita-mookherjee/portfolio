@@ -405,14 +405,14 @@ body.js-flip .panel {
 
 .pcard {
   position: absolute; left: 50%; top: 50%;
-  width: 272px;
+  width: 295px; /* cover images are now 1040x1280 (13:16) — width recalculated from that ratio so the photo's height stays the same as the original (272 * 4/3 = 295 * 16/13 ~ 363px), only the width grows */
   background: #fff; padding: 16px; border-radius: 0; /* sharp corners, matching the cut-paper/polaroid look everywhere else */
   box-shadow: 0 22px 45px -20px rgba(20, 26, 50, 0.55);
   transform: translate(-50%, -50%);
   will-change: transform, opacity; cursor: pointer; user-select: none;
 }
 .pcard__photo {
-  display: block; width: 100%; aspect-ratio: 3 / 4; border-radius: 3px;
+  display: block; width: 100%; aspect-ratio: 13 / 16; border-radius: 3px;
   background: #c3c3c3; object-fit: cover; object-position: top;
 }
 .pcard__cap { padding: 16px 0 0; text-align: left; }
@@ -1664,6 +1664,56 @@ body.js-flip .panel {
   scroll-snap-align: start;
 }
 
+/* A slide that has a real playable video sitting inside a static mockup
+   screenshot (the PDF itself can only ever carry the static image) —
+   this wraps that one page's canvas so the video can sit positioned
+   exactly over the mockup's own screen area, in the same scroll-snap
+   flow as every other page. */
+.pdf-overlay__page-wrap {
+  position: relative;
+  width: fit-content;
+  scroll-snap-align: start;
+}
+.pdf-overlay__page-wrap .pdf-overlay__page {
+  scroll-snap-align: none; /* the wrap itself is the snap target now */
+}
+.pdf-overlay__video {
+  position: absolute;
+  object-fit: cover;
+  pointer-events: none; /* clicks go to the toggle button sitting on top instead */
+  /* rounds to roughly match the phone mockup's own screen corners — the
+     two values are independent (horizontal % of width, vertical % of
+     height) rather than one shared value, because this box is much
+     taller than it is wide; a single percentage would stretch into an
+     elliptical corner instead of the rounded-square look the mockup
+     actually has. Both are just "12% of the video's own width" restated
+     against each axis, so the visual roundedness stays consistent
+     however big the video renders at (zoomed in/out, mobile/desktop). */
+  border-radius: 12% / 5.5%;
+}
+.pdf-overlay__video-toggle {
+  position: absolute;
+  display: grid; place-items: center;
+  background: transparent; border: none; padding: 0; margin: 0;
+  cursor: pointer;
+}
+.pdf-overlay__video-icon {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(38, 38, 38, 0.55);
+  color: #f4efe7;
+  display: grid; place-items: center;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.pdf-overlay__video-icon svg { width: 20px; height: 20px; display: block; }
+/* hidden while quietly autoplaying — only appears on hover (desktop) or
+   persistently once paused, so it reads as "click to pause/resume"
+   rather than a control bar sitting on top of the demo the whole time */
+.pdf-overlay__video-toggle:hover .pdf-overlay__video-icon,
+.pdf-overlay__video-toggle.is-paused .pdf-overlay__video-icon {
+  opacity: 1;
+}
+
 .pdf-overlay__pagecount {
   position: absolute;
   left: 50%; bottom: 14px;
@@ -1715,6 +1765,10 @@ body.js-flip .panel {
   /* no room for these on a full-bleed mobile page — closing and picking
      another card covers switching projects there */
   .pdf-overlay__projnav { display: none; }
+  /* desktop-only, same reasoning as the fullscreen open-in-new-tab
+     option itself — mobile browsers don't have a meaningfully "bigger"
+     window to open the PDF into, the modal's already full-bleed there */
+  .pdf-overlay__fullscreen { display: none; }
   /* full-bleed "inner page" instead of a floating dialog. Pinned to the
      top-left (not centered) — centering a 100dvh/100svh panel inside a
      plain inset:0 backdrop left a sliver of the backdrop showing above

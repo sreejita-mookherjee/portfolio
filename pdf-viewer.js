@@ -56,9 +56,86 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     lazyObserver: null,     // triggers each page's render as it nears the viewport
     renderQueue: [],        // pending {canvas, idx} pairs, drained one at a time
     queueRunning: false,
-    zoom: 1                 // manual in-app zoom — see setZoom()
+    zoom: 1,                // manual in-app zoom — see setZoom()
+    videoObservers: []      // one per video-overlay slide, watching when it's actually on screen
   };
   var ZOOM_MIN = 1, ZOOM_MAX = 2, ZOOM_STEP = 0.25;
+
+  /* A slide can have a real, playable video sitting exactly where a
+     static mockup screenshot normally would — the PDF itself only ever
+     carries the static image (pdf.js has no video-playback path at
+     all), so this overlays a real <video> element on top of that one
+     page, positioned as a % of the page's own dimensions so it tracks
+     correctly at any zoom level or viewport width. bbox values come
+     straight from the PDF's own embedded image placement (page.get_
+     image_info() in PyMuPDF) for the static image the video replaces,
+     converted to % of the page's point-size (1920x1080 here). Keyed by
+     the same filename-derived slug used for GA4's project_name. */
+  var VIDEO_OVERLAYS = {
+    'hp-dashboard': {
+      page: 5,
+      src: 'assets/p2/hp-dashboard-transition.mp4',
+      leftPct: 68.1293, topPct: 21.0574, widthPct: 14.9875, heightPct: 57.9778
+    }
+  };
+  function pdfSlugFromUrl(url) {
+    return url ? url.split('/').pop().split('?')[0].replace(/\.pdf$/i, '') : '';
+  }
+  function buildVideoOverlay(cfg) {
+    var wrap = document.createElement('div');
+    wrap.className = 'pdf-overlay__page-wrap';
+    var video = document.createElement('video');
+    video.className = 'pdf-overlay__video';
+    video.src = cfg.src;
+    video.loop = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.style.left = cfg.leftPct + '%';
+    video.style.top = cfg.topPct + '%';
+    video.style.width = cfg.widthPct + '%';
+    video.style.height = cfg.heightPct + '%';
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'pdf-overlay__video-toggle';
+    toggle.setAttribute('aria-label', 'Pause video');
+    toggle.style.left = cfg.leftPct + '%';
+    toggle.style.top = cfg.topPct + '%';
+    toggle.style.width = cfg.widthPct + '%';
+    toggle.style.height = cfg.heightPct + '%';
+    var playIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    var pauseIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+    function syncIcon() {
+      toggle.innerHTML = '<span class="pdf-overlay__video-icon">' + (video.paused ? playIcon : pauseIcon) + '</span>';
+      toggle.classList.toggle('is-paused', video.paused);
+      toggle.setAttribute('aria-label', video.paused ? 'Play video' : 'Pause video');
+    }
+    toggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (video.paused) video.play(); else video.pause();
+    });
+    video.addEventListener('play', syncIcon);
+    video.addEventListener('pause', syncIcon);
+    syncIcon();
+    wrap.appendChild(video);
+    wrap.appendChild(toggle);
+    /* Only plays once the visitor has actually scrolled to this slide
+       (not the moment the modal opens, even if this is buried several
+       pages down) — and pauses again once they've scrolled past it,
+       rather than quietly looping on forever off-screen. Re-triggers
+       every time it re-enters view, same as the common "video plays
+       while it's the one on screen" pattern. A manual pause via the
+       toggle is only overridden by actually leaving and returning to
+       view, not by anything else. */
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) video.play().catch(function () { /* still fine — the play icon covers it */ });
+        else video.pause();
+      });
+    }, { root: viewport, threshold: 0.5 });
+    io.observe(wrap);
+    state.videoObservers.push(io);
+    return wrap;
+  }
 
   function isMobileViewport() {
     return window.matchMedia('(max-width: 860px)').matches;
@@ -67,6 +144,8 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
   function clearPages() {
     if (state.pageObserver) { state.pageObserver.disconnect(); state.pageObserver = null; }
     if (state.lazyObserver) { state.lazyObserver.disconnect(); state.lazyObserver = null; }
+    state.videoObservers.forEach(function (io) { io.disconnect(); });
+    state.videoObservers = [];
     state.renderQueue = [];
     state.queueRunning = false;
     pagesWrap.innerHTML = '';
@@ -81,7 +160,7 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
      pinch/ctrl-scroll zoom-in immediately pixelates; mobile gets more
      of it since a phone is pinch-zoomed far more often than a laptop. */
   var ZOOM_HEADROOM = { mobile: 2.2, desktop: 1.5 };
-  function renderPage(pdf, num, canvas, myToken) {
+  function renderPage(pdf, num, canvas, myToken, taskHolder) {
     return pdf.getPage(num).then(function (page) {
       if (myToken !== state.renderToken) return;
       var baseViewport = page.getViewport({ scale: 1 });
@@ -97,7 +176,13 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
       canvas.style.width = Math.floor(displayViewport.width) + 'px';
       canvas.style.height = Math.floor(displayViewport.height) + 'px';
       var ctx = canvas.getContext('2d');
-      return page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+      /* keep the RenderTask itself (not just its .promise) so a caller
+         racing this against a timeout can actually call .cancel() on a
+         stuck one — releasing the canvas so a retry can reuse it instead
+         of just abandoning it blank forever. See pumpQueue below. */
+      var task = page.render({ canvasContext: ctx, viewport: renderViewport });
+      if (taskHolder) taskHolder.task = task;
+      return task.promise;
     });
   }
 
@@ -110,14 +195,21 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
 
      Each page is also raced against a timeout — pdf.js's render() can,
      separately and rarely, just never settle (confirmed here too, same
-     as the warm-up's version of this problem). Without a timeout, one
-     stuck page would permanently block every page queued after it,
-     not just itself. Racing means a stuck page just stays blank on its
-     own; everything queued after it still gets its turn.
+     as the warm-up's version of this problem — and confirmed again on
+     a since-added dense/complex deck, waited 25+s with zero settlement).
+     Without a timeout, one stuck page would permanently block every
+     page queued after it. On timeout the stuck RenderTask is explicitly
+     .cancel()'d (releasing its claim on the canvas — pdf.js otherwise
+     refuses a second render() on the same canvas while one's still
+     "in progress") and given ONE retry on that same canvas before
+     giving up for good. A plain race with no cancel — the earlier
+     version of this — left a genuinely stuck page blank forever, with
+     no chance to recover on retry.
 
      What gets INTO this queue is driven by wireLazyRender() below, not
      "every page, immediately" — see that function for why. */
   var RENDER_TIMEOUT_MS = 4000;
+  var RENDER_MAX_ATTEMPTS = 2;
   function queueRender(canvas, idx) {
     if (canvas.dataset.queued) return canvas.__renderPromise || Promise.resolve();
     canvas.dataset.queued = '1';
@@ -134,8 +226,17 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     if (!item) return;
     state.queueRunning = true;
     if (item.token !== state.renderToken) { state.queueRunning = false; item.resolve(); pumpQueue(); return; }
-    var timeout = new Promise(function (resolve) { setTimeout(resolve, RENDER_TIMEOUT_MS); });
-    Promise.race([renderPage(state.doc, item.idx + 1, item.canvas, item.token), timeout]).then(function () {
+    runRenderAttempt(item, 1);
+  }
+  function runRenderAttempt(item, attempt) {
+    var taskHolder = {};
+    var timeout = new Promise(function (resolve) { setTimeout(function () { resolve('timeout'); }, RENDER_TIMEOUT_MS); });
+    var real = renderPage(state.doc, item.idx + 1, item.canvas, item.token, taskHolder).then(function () { return 'done'; }, function () { return 'error'; });
+    Promise.race([real, timeout]).then(function (which) {
+      if (which === 'timeout') {
+        if (taskHolder.task) { try { taskHolder.task.cancel(); } catch (e) { /* already settling on its own — fine either way */ } }
+        if (attempt < RENDER_MAX_ATTEMPTS) { runRenderAttempt(item, attempt + 1); return; }
+      }
       item.canvas.dataset.rendered = '1';
       state.queueRunning = false;
       item.resolve();
@@ -342,10 +443,17 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     state.doc = pdf;
     state.numPages = pdf.numPages;
     clearPages();
+    var videoOverlay = VIDEO_OVERLAYS[pdfSlugFromUrl(state.url)];
     for (var i = 0; i < pdf.numPages; i++) {
       var c = document.createElement('canvas');
       c.className = 'pdf-overlay__page';
-      pagesWrap.appendChild(c);
+      if (videoOverlay && videoOverlay.page === i + 1) {
+        var wrap = buildVideoOverlay(videoOverlay);
+        wrap.insertBefore(c, wrap.firstChild);
+        pagesWrap.appendChild(wrap);
+      } else {
+        pagesWrap.appendChild(c);
+      }
       state.canvases.push(c);
     }
     viewport.scrollTop = 0;
@@ -380,6 +488,8 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     clearPages();
     pageCountEl.textContent = '';
     pageCountEl.hidden = true;
+    // GA4: fresh scroll-depth read for whichever project this open/switch lands on
+    if (window.__resetPdfScrollDepth) window.__resetPdfScrollDepth();
 
     if (state.url === url && state.doc) {
       buildPages(state.doc, myToken);
@@ -511,6 +621,12 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     card.addEventListener('click', function () { open(card); });
   });
   closeBtn.addEventListener('click', function () { close(false); });
+  // GA4: how far into this specific case study people actually scroll
+  viewport.addEventListener('scroll', function () {
+    if (!window.__trackPdfScroll || !state.url) return;
+    var slug = state.url.split('/').pop().split('?')[0].replace(/\.pdf$/i, '');
+    window.__trackPdfScroll(viewport, slug);
+  }, { passive: true });
   if (zoomInBtn) zoomInBtn.addEventListener('click', function () { setZoom(state.zoom + ZOOM_STEP); });
   if (zoomOutBtn) zoomOutBtn.addEventListener('click', function () { setZoom(state.zoom - ZOOM_STEP); });
   /* opens the raw PDF file in a new tab — the browser's own viewer
