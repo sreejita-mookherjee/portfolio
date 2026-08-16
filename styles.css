@@ -1765,10 +1765,11 @@ body.js-flip .panel {
   /* no room for these on a full-bleed mobile page — closing and picking
      another card covers switching projects there */
   .pdf-overlay__projnav { display: none; }
-  /* desktop-only, same reasoning as the fullscreen open-in-new-tab
-     option itself — mobile browsers don't have a meaningfully "bigger"
-     window to open the PDF into, the modal's already full-bleed there */
-  .pdf-overlay__fullscreen { display: none; }
+  /* kept visible on mobile too (unlike projnav above) — it's the
+     escape hatch to the phone's own native PDF viewer, which matters
+     more here than on desktop: dense slides that struggle to render in
+     this in-page pdf.js viewer on slower mobile hardware still open
+     fine natively, since that's a completely different rendering path. */
   /* full-bleed "inner page" instead of a floating dialog. Pinned to the
      top-left (not centered) — centering a 100dvh/100svh panel inside a
      plain inset:0 backdrop left a sliver of the backdrop showing above

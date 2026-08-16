@@ -213,8 +213,16 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
      still can't block the queue for more than 2x this either way.
 
      What gets INTO this queue is driven by wireLazyRender() below, not
-     "every page, immediately" — see that function for why. */
-  var RENDER_TIMEOUT_MS = 9000;
+     "every page, immediately" — see that function for why.
+
+     Mobile gets a notably longer allowance than desktop, not just a
+     little one — it's slower hardware for this kind of canvas
+     compositing AND (see ZOOM_HEADROOM above) already asked to render
+     at a higher pixel multiplier than desktop for the same page, so
+     the same "heavy" slide is genuinely more work there twice over. A
+     timeout tuned for desktop was confirmed too short on mobile for
+     these dense component-doc slides specifically. */
+  var RENDER_TIMEOUT_MS = { mobile: 16000, desktop: 9000 };
   var RENDER_MAX_ATTEMPTS = 2;
   function queueRender(canvas, idx) {
     if (canvas.dataset.queued) return canvas.__renderPromise || Promise.resolve();
@@ -236,7 +244,8 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
   }
   function runRenderAttempt(item, attempt) {
     var taskHolder = {};
-    var timeout = new Promise(function (resolve) { setTimeout(function () { resolve('timeout'); }, RENDER_TIMEOUT_MS); });
+    var timeoutMs = state.isMobile ? RENDER_TIMEOUT_MS.mobile : RENDER_TIMEOUT_MS.desktop;
+    var timeout = new Promise(function (resolve) { setTimeout(function () { resolve('timeout'); }, timeoutMs); });
     var real = renderPage(state.doc, item.idx + 1, item.canvas, item.token, taskHolder).then(function () { return 'done'; }, function () { return 'error'; });
     Promise.race([real, timeout]).then(function (which) {
       if (which === 'timeout') {
