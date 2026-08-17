@@ -1681,15 +1681,11 @@ body.js-flip .panel {
   position: absolute;
   object-fit: cover;
   pointer-events: none; /* clicks go to the toggle button sitting on top instead */
-  /* rounds to roughly match the phone mockup's own screen corners — the
-     two values are independent (horizontal % of width, vertical % of
-     height) rather than one shared value, because this box is much
-     taller than it is wide; a single percentage would stretch into an
-     elliptical corner instead of the rounded-square look the mockup
-     actually has. Both are just "12% of the video's own width" restated
-     against each axis, so the visual roundedness stays consistent
-     however big the video renders at (zoomed in/out, mobile/desktop). */
-  border-radius: 12% / 5.5%;
+  /* border-radius is set inline per-overlay (see VIDEO_OVERLAYS'
+     radiusPct in pdf-viewer.js) rather than fixed here — a phone
+     screen and a laptop screen have very different corner roundedness
+     relative to their own proportions, so one shared CSS value doesn't
+     fit both. */
 }
 .pdf-overlay__video-toggle {
   position: absolute;

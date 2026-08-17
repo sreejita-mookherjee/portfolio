@@ -75,7 +75,32 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     'hp-dashboard': {
       page: 5,
       src: 'assets/p2/hp-dashboard-transition.mp4',
-      leftPct: 68.1293, topPct: 21.0574, widthPct: 14.9875, heightPct: 57.9778
+      leftPct: 68.1293, topPct: 21.0574, widthPct: 14.9875, heightPct: 57.9778,
+      radiusPct: '12% / 5.5%' // tall phone screen — rounder relative to its own narrow width
+    },
+    'interactive-landing': {
+      page: 3,
+      /* re-encoded straight from the ORIGINAL recording with no crop at
+         all (an earlier pass had cut 200px off the top thinking it was
+         just OS window chrome to discard — it wasn't: that's the real
+         captured browser tab + address bar, genuine content, not
+         something to trim). v=4 is this uncropped re-encode
+         (scale=1440:-2 only), 1440x900, ratio 1.6. */
+      src: 'assets/p2/unstop-landing-demo.mp4?v=4',
+      /* position + size traced straight from this file's own clip
+         rectangle (q ... cm ... W n ... Do ... Q in the nested Form
+         XObject) after the mockup was resized in Figma to 988 x 616 —
+         leftPx/topPx(bottom-origin)/widthPx/heightPx = 453 / 164.000061
+         / 988.000122 / 616, converted to % of the 1920x1080 page.
+         988x616 (ratio 1.6039) is almost an exact match for the
+         uncropped video's own 1440x900 (ratio 1.6) — the taller box
+         wasn't for extra breathing room, it was sized to fit the whole
+         uncropped recording with barely any letterboxing. */
+      leftPct: 23.5938, topPct: 27.7778, widthPct: 51.4583, heightPct: 57.0370,
+      radiusPct: '2.5% / 3.5%', // flatter laptop screen — much less corner rounding than a phone
+      objectFit: 'contain', // ratios are near-identical, but 'contain' guards against rounding without ever cropping real content
+      objectPosition: 'top',
+      nativeControls: true // ~50s demo — needs real seek/skip, not just play-pause
     }
   };
   function pdfSlugFromUrl(url) {
@@ -94,30 +119,68 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     video.style.top = cfg.topPct + '%';
     video.style.width = cfg.widthPct + '%';
     video.style.height = cfg.heightPct + '%';
-    var toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'pdf-overlay__video-toggle';
-    toggle.setAttribute('aria-label', 'Pause video');
-    toggle.style.left = cfg.leftPct + '%';
-    toggle.style.top = cfg.topPct + '%';
-    toggle.style.width = cfg.widthPct + '%';
-    toggle.style.height = cfg.heightPct + '%';
-    var playIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-    var pauseIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
-    function syncIcon() {
-      toggle.innerHTML = '<span class="pdf-overlay__video-icon">' + (video.paused ? playIcon : pauseIcon) + '</span>';
-      toggle.classList.toggle('is-paused', video.paused);
-      toggle.setAttribute('aria-label', video.paused ? 'Play video' : 'Pause video');
+    /* 'cover' (default) fills the box completely but crops whichever
+       edges don't match the box's own proportions — fine when that
+       edge content is just decorative background, wrong when it crops
+       into something that actually matters (here: the page's own
+       header/logo). 'contain' shows the whole video with nothing cut
+       off, at the cost of a small letterboxed gap on the edges that
+       DO match the box's proportions instead. */
+    video.style.objectFit = cfg.objectFit || 'cover';
+    /* which edge that leftover gap collects on — 'top' pins the video's
+       own content flush to the top of the box (gap falls to the
+       bottom), so a box taller than the video's natural size still
+       reads as one deliberate mockup rather than a clip floating
+       mid-box. Defaults to centered, object-fit's own default. */
+    if (cfg.objectPosition) video.style.objectPosition = cfg.objectPosition;
+    if (cfg.radiusPct) video.style.borderRadius = cfg.radiusPct;
+    /* 'contain' leaves the video's own box only PARTLY covered by
+       actual video pixels (the rest is letterboxed gap) — a <video>
+       element has no fill of its own for that leftover space, so
+       without an explicit background it stays transparent and the
+       static placeholder image on the canvas underneath shows straight
+       through it. This is what looked like "an extra header/footer
+       from nowhere" — it was never a second element, just the
+       placeholder image bleeding through the gap. A solid background
+       matching the mockup's own screen colour covers the whole box
+       regardless of how much of it the actual video frame fills. */
+    video.style.backgroundColor = cfg.bgColor || '#ffffff';
+    var toggle = null;
+    if (cfg.nativeControls) {
+      /* long demo (~50s) — a fixed play/pause toggle isn't enough to
+         usefully navigate that, so this hands off to the browser's own
+         video UI (seek bar, skip, play/pause) instead of the minimal
+         custom one. Needs real pointer-events on the video itself
+         (unlike the custom-toggle path below, where the video stays
+         click-through and an invisible button sits on top instead). */
+      video.controls = true;
+      video.style.pointerEvents = 'auto';
+    } else {
+      toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'pdf-overlay__video-toggle';
+      toggle.setAttribute('aria-label', 'Pause video');
+      toggle.style.left = cfg.leftPct + '%';
+      toggle.style.top = cfg.topPct + '%';
+      toggle.style.width = cfg.widthPct + '%';
+      toggle.style.height = cfg.heightPct + '%';
+      var playIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+      var pauseIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+      var syncIcon = function () {
+        toggle.innerHTML = '<span class="pdf-overlay__video-icon">' + (video.paused ? playIcon : pauseIcon) + '</span>';
+        toggle.classList.toggle('is-paused', video.paused);
+        toggle.setAttribute('aria-label', video.paused ? 'Play video' : 'Pause video');
+      };
+      toggle.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (video.paused) video.play(); else video.pause();
+      });
+      video.addEventListener('play', syncIcon);
+      video.addEventListener('pause', syncIcon);
+      syncIcon();
     }
-    toggle.addEventListener('click', function (e) {
-      e.stopPropagation();
-      if (video.paused) video.play(); else video.pause();
-    });
-    video.addEventListener('play', syncIcon);
-    video.addEventListener('pause', syncIcon);
-    syncIcon();
     wrap.appendChild(video);
-    wrap.appendChild(toggle);
+    if (toggle) wrap.appendChild(toggle);
     /* Only plays once the visitor has actually scrolled to this slide
        (not the moment the modal opens, even if this is buried several
        pages down) — and pauses again once they've scrolled past it,
