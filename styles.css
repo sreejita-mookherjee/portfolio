@@ -1621,6 +1621,13 @@ body.js-flip .panel {
   min-height: 0;
   overflow-y: auto;
   overflow-x: auto; /* zoomed-in slides (desktop zoom control) can exceed panel width — without this the extra width just clips instead of scrolling into view */
+  /* without this, hitting the top/bottom edge of the PDF content
+     "scroll-chains" straight to the page behind the modal — the
+     blockBackgroundScroll guard in pdf-viewer.js correctly leaves wheel
+     events targeting this viewport alone (so it can scroll normally),
+     but the browser's default chaining behavior takes over exactly at
+     the boundary, once this element itself has nowhere left to scroll. */
+  overscroll-behavior: contain;
   /* scroll-behavior: smooth was fighting direct wheel/trackpad input —
      combined with scroll-snap it made the browser try to animate/settle
      toward a snap point on every small scroll tick instead of just

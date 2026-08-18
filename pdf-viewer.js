@@ -39,6 +39,7 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
   var fullscreenBtn = document.getElementById('pdfOverlayFullscreen');
   var projPrevBtn = document.getElementById('pdfOverlayProjPrev');
   var projNextBtn = document.getElementById('pdfOverlayProjNext');
+  var panel = overlay.querySelector('.pdf-overlay__panel');
   if (!overlay || !pagesWrap) return;
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.mjs';
@@ -597,7 +598,15 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
      normally — never touches body's box model at all, so there's
      nothing for GSAP's pin math to get out of sync with. */
   function blockBackgroundScroll(e) {
-    if (overlay.contains(e.target)) return;
+    /* Scoped to the panel's actual content, NOT the whole overlay.
+       overlay.contains(overlay) is true (a node "contains" itself per the
+       DOM spec), so checking against `overlay` here let scroll leak
+       through untouched anywhere the wheel/touch target was the backdrop
+       itself — i.e. the visible margin around the centered panel on
+       desktop. Scoping to `panel` still exempts the PDF viewport/zoom
+       controls (real scroll/zoom needs to keep working there) while
+       correctly blocking the backdrop. */
+    if (panel && panel.contains(e.target)) return;
     e.preventDefault();
   }
   function lockScroll() {
