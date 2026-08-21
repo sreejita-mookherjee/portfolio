@@ -730,9 +730,50 @@ import * as pdfjsLib from './assets/vendor/pdf.min.mjs';
     if (projNextBtn) projNextBtn.hidden = true;
   }
   overlay.addEventListener('click', function (e) { if (e.target === overlay && !justPanned) close(); });
+  /* Every top-level child of pagesWrap IS a scroll-snap target (either a
+     bare .pdf-overlay__page, or a .pdf-overlay__page-wrap for a
+     video-overlay slide — the CSS explicitly unsets scroll-snap-align on
+     the canvas *inside* a wrap, leaving only the wrap itself snappable),
+     so this list is the correct "one step = one slide" unit regardless
+     of which kind of slide it is. */
+  function snapTargets() { return Array.prototype.slice.call(pagesWrap.children); }
+  function currentSnapIndex(targets) {
+    var top = viewport.scrollTop;
+    var idx = 0;
+    for (var i = 0; i < targets.length; i++) {
+      if (targets[i].offsetTop <= top + 4) idx = i; else break;
+    }
+    return idx;
+  }
+  /* Steps exactly one slide at a time via scrollIntoView, rather than a
+     fixed pixel offset — the viewport has `scroll-snap-type: y` with each
+     slide `scroll-snap-align: start` (see the .pdf-overlay__viewport /
+     .pdf-overlay__page rules), and a small arbitrary scrollBy() lands
+     inside the *current* slide's own snap zone and just gets pulled
+     straight back to where it started, silently doing nothing. Jumping
+     to the actual next/previous snap target is the only way a single
+     keypress reliably moves anywhere in a snap container. */
+  function stepSlide(delta) {
+    var targets = snapTargets();
+    if (!targets.length) return;
+    var next = targets[Math.max(0, Math.min(targets.length - 1, currentSnapIndex(targets) + delta))];
+    if (next) next.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  /* Arrow/Page/Space/Home/End all scroll SOMETHING by default even though
+     nothing inside the modal ever holds keyboard focus (no input/button
+     grabs it on open) — with no handler here, the browser falls back to
+     scrolling the page underneath instead, exactly like the wheel/touch
+     case blockBackgroundScroll exists for above. Redirecting these keys
+     into the PDF viewport itself (instead of just preventDefault-ing them
+     into a no-op) keeps the keyboard path actually usable for reading a
+     case study, not just harmless. */
   document.addEventListener('keydown', function (e) {
     if (!overlay.classList.contains('is-open')) return;
-    if (e.key === 'Escape') close();
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); stepSlide(1); return; }
+    if (e.key === 'ArrowUp' || e.key === 'PageUp') { e.preventDefault(); stepSlide(-1); return; }
+    if (e.key === 'Home') { e.preventDefault(); viewport.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (e.key === 'End') { e.preventDefault(); viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' }); return; }
   });
   /* ctrl+wheel/trackpad-pinch drives setZoom() directly — Chrome/Firefox
      report that gesture as a wheel event with ctrlKey true. A leak
