@@ -1,0 +1,1532 @@
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('assets/fonts/oswald-semibold.woff2') format('woff2');
+}
+
+/* Medium (500) — the carousel card titles switched to this weight, but
+   without an actual Medium font file registered, `font-weight: 500`
+   just fell back to the only weight available (Semibold) and looked
+   unchanged. Self-hosted the same way as the Semibold file above. */
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('assets/fonts/oswald-medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('assets/fonts/source-serif-4-regular.woff2') format('woff2');
+}
+
+/* Light (300) — for the work-card subtitle, which needed a weight
+   below Regular (the only one self-hosted until now). Same lesson as
+   Oswald Medium above: without an actual Light file registered,
+   `font-weight: 300` would've just fallen back to Regular. */
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('assets/fonts/source-serif-4-light.woff2') format('woff2');
+}
+
+:root {
+  --bg: #f4efe7;
+  --ink: #262626;
+  --sage: #6e7b59;
+  --stage-w: 1726;
+  --stage-h: 996;
+  --stage-scale: 1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background: var(--bg);
+}
+
+body {
+  position: relative;
+}
+
+/* ===================================================================
+   Page-flip base layout (also the mobile / no-JS fallback)
+   =================================================================== */
+.panel {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+}
+.horizontal { position: relative; }
+.track { display: flex; flex-direction: column; }
+
+/* flip mode, added to <body> by flip.js on wide screens */
+body.js-flip .horizontal { height: 100vh; overflow: hidden; }
+body.js-flip .track {
+  position: relative; height: 100vh;
+  perspective: 2600px; perspective-origin: 50% 50%;
+  transform-style: preserve-3d;
+}
+body.js-flip .panel {
+  position: absolute; inset: 0;
+  width: 100vw; height: 100vh; min-height: 0;
+  transform-origin: left center;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.flip-shade {
+  position: absolute; inset: 0;
+  z-index: 60; opacity: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(18, 20, 38, 0) 35%, rgba(18, 20, 38, 0.55) 100%);
+}
+
+/* nav dots — vertical tick stack, right-middle */
+.dots {
+  position: fixed; right: clamp(14px, 3vw, 34px); top: 50%;
+  transform: translateY(-50%);
+  z-index: 500; display: flex; flex-direction: column; align-items: flex-end; gap: 0;
+}
+.dot {
+  position: relative;
+  box-sizing: content-box;
+  width: 26px; height: 3px; padding: 10px 12px; border: none; border-radius: 2px;
+  background-color: #d8d2c4; background-clip: content-box; cursor: pointer;
+  transition: background-color .3s ease, width .3s ease;
+}
+.dot:hover { background-color: #9b9387; }
+.dot.is-active { background-color: var(--ink); width: 36px; }
+.dot.is-active:hover { background-color: var(--ink); }
+
+.dot::after {
+  content: attr(data-label);
+  position: absolute;
+  right: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  white-space: nowrap;
+  font-family: 'Source Serif 4', serif;
+  font-size: 18px;
+  line-height: normal;
+  color: #9b9387;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.dot.is-active::after { color: var(--ink); }
+.dot:hover::after,
+.dot:focus-visible::after {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* mobile-only top-right avatar+hamburger pill — toggles .dots (restyled
+   as a dropdown below) open/closed. Fully hidden on desktop, where
+   .dots is always visible as the tick nav above. See the mobile media
+   query below for its actual appearance. */
+.mobile-nav-toggle { display: none; }
+
+/* ===================================================================
+   Shared decorative "stage" — a fixed 1726x996 canvas scaled to cover
+   whichever panel it sits in. Purely decorative background layers.
+   =================================================================== */
+.stage-wrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.stage {
+  position: relative;
+  width: calc(var(--stage-w) * 1px);
+  height: calc(var(--stage-h) * 1px);
+  flex: none;
+  transform: scale(var(--stage-scale, 1));
+}
+
+/* Faint diagonal line pattern in the background (panel 1) */
+.vector-wrap {
+  position: absolute;
+  left: calc(50% - 7px);
+  top: calc(50% + 103px);
+  width: 2445.587px;
+  height: 2372.89px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vector-rotate {
+  flex: none;
+  width: 1876px;
+  height: 1586px;
+  transform: rotate(-34.79deg);
+}
+
+.vector-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Same pattern, mirrored + rotated differently (panel 2) */
+.vector-rotate--2 {
+  transform: rotate(-145.21deg) scaleY(-1);
+}
+
+/* Stars — panel 1 */
+.star {
+  position: absolute;
+  display: block;
+}
+
+.star-a { left: 441.766px; top: 864.179px; width: 39.821px; height: 39.821px; }
+.star-b { left: 82.131px;  top: 406.089px; width: 39.821px; height: 39.821px; }
+.star-c { left: 1545.56px; top: 209.089px; width: 39.821px; height: 39.821px; }
+.star-d { left: 816.335px; top: 169.089px; width: 39.821px; height: 39.821px; }
+.star-e { left: 893px;     top: 461px;     width: 32px;     height: 32px; }
+
+/* Stars — panel 2 */
+.p2-star { position: absolute; display: block; width: 39.821px; height: 39.821px; }
+.p2-star-a { left: 146px;     top: 847px; }
+.p2-star-b { left: 338px;     top: 131px; }
+.p2-star-c { left: 1545.56px; top: 209.089px; }
+
+/* Headlines */
+.headline {
+  position: absolute;
+  margin: 0;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 154px;
+  line-height: normal;
+  color: var(--ink);
+  white-space: nowrap;
+  text-transform: uppercase;
+  z-index: 6; /* above .p1-photo-card (5) — the headline should read on
+                 top of the polaroid where they overlap, not be hidden under it */
+}
+
+.headline-first {
+  left: 349px;
+  top: 245px;
+}
+
+.headline-second {
+  left: 514px;
+  top: 411px; /* a little closer under "Sreejita" (was 441px) */
+}
+
+/* small polaroid-style photo tucked between the two name lines —
+   clear of "Sreejita" (no overlap), bottom-left corner overlaps
+   "Mookherjee" around the K/H, like a photo taped onto the page */
+.p1-photo-card {
+  position: absolute;
+  left: 905px;
+  top: 258px; /* nudged 10px, then 20px, then another 10px up */
+  width: 221.375px; /* 175px + 10%, then +15% more */
+  height: auto;
+  display: block;
+  z-index: 5;
+}
+
+/* mobile-only "scroll to continue" cue — hidden entirely on desktop,
+   where the bare .scroll-hint arrow + wave-hand .sphere do this job
+   instead. See the mobile media query below for its appearance. */
+.mobile-scroll-cue { display: none; }
+
+/* phones: the mini-me that stands in for the polaroid (mini-me-m1.js) */
+.p1-mini-me { display: none; }
+@media (max-width: 860px) {
+  .p1-mini-me {
+    display: block;
+    position: absolute;             /* laid over the polaroid's box by the script */
+    z-index: 15;                    /* under the torn paper (20), like the polaroid */
+    pointer-events: none;
+  }
+}
+@media (max-width: 860px) and (prefers-reduced-motion: no-preference) {
+  .p1-photo-card { visibility: hidden; }   /* she takes its place; shown again if she can't load */
+}
+
+/* Handwritten script lines */
+.script {
+  position: absolute;
+  margin: 0;
+  font-family: 'Source Serif 4', serif;
+  font-weight: 400;
+  font-size: 32px;
+  letter-spacing: normal;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.script-top {
+  left: 349px;
+  top: 229px;
+}
+
+.script-bottom {
+  left: 1060px; /* right-edge-aligned with headline-second below it */
+  top: 615px; /* follows headline-second up (was 645px) */
+}
+
+/* Sphere / waving hand badge */
+.sphere {
+  position: absolute;
+  left: 1340px; /* nudged right from 1297px so it clears
+                   headline-second's shorter (154px) width */
+  top: 463px; /* follows headline-second up (was 493px) */
+  width: 128.865px;
+  height: 139.999px;
+}
+
+.sphere-badge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sphere-hand {
+  position: absolute;
+  left: 11.933px;
+  top: 15.909px;
+  width: 107.387px;
+  height: 107.387px;
+  display: block;
+}
+
+/* "Scroll to continue" hint — appears only after the user has sat on
+   Home for a while without scrolling (see scroll-hint.js). Sits above
+   the bottom torn-paper strip, centred. */
+.scroll-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(clamp(56px, 9vh, 104px) + 10px);
+  transform: translateX(-50%);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Source Serif 4', serif;
+  font-size: clamp(16px, 1.7vw, 22px);
+  color: #9b9387;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.scroll-hint.is-visible {
+  opacity: 1;
+}
+
+.scroll-hint svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* ===================================================================
+   Torn paper strips. Panel 1 uses paper-1/paper-2 (the original full
+   strips). Panel 2 uses paper-3/paper-4 — a separate, more minimal torn
+   pattern — with a slight rotation on top so the two pages read as
+   distinct. Oversized + centred so the tilt never reveals a gap at the
+   edges.
+
+   Split into a static wrapper (position + constant tilt, plain CSS
+   transform) and an inner img that GSAP animates for the reveal-in
+   (yPercent/opacity) — GSAP writes its own inline `transform`, which
+   would otherwise clobber the CSS translateX/rotate on the same node.
+   =================================================================== */
+.paper-strip-wrap {
+  position: absolute;
+  left: 50%;
+  width: 108vw;
+  transform: translateX(-50%) rotate(var(--tilt, 0deg));
+  z-index: 20;
+  pointer-events: none;
+}
+
+.paper-strip-wrap--top { top: -1vw; }
+.paper-strip-wrap--bottom { bottom: -1vw; }
+
+.paper-strip-wrap--tilt-a { --tilt: 1.6deg; }
+.paper-strip-wrap--tilt-b { --tilt: -1.4deg; }
+
+.paper-strip {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+/* ===================================================================
+   Selected Work heading (panel 2) — exact Figma position, inside the
+   scaled stage (frame 92:24390, heading frame at x724 y110 w279 h163)
+   =================================================================== */
+.p2-heading {
+  position: absolute;
+  left: 0;
+  top: 110px;
+  width: 1726px;
+  text-align: center;
+}
+
+.p2-script {
+  position: static;
+  font-size: 32px;
+  margin: 0 0 -12px;
+}
+
+.p2-title {
+  position: static;
+  font-size: 132px;
+  line-height: 158px;
+  letter-spacing: normal;
+}
+
+/* ===================================================================
+   Carousel — circular "coverflow" of polaroid cards (GSAP-driven).
+   Sized/positioned so its centre lands on the hero card's centre in
+   Figma (card 1: x726.67 y337.13 w272 h416 → centre 862.67, 545.13).
+   =================================================================== */
+.carousel { position: absolute; left: 212.67px; top: 320.13px; width: 1300px; height: 450px; }
+.carousel__stage { position: absolute; inset: 0; }
+
+.pcard {
+  position: absolute; left: 50%; top: 50%;
+  width: 295px; /* cover images are now 1040x1280 (13:16) — width recalculated from that ratio so the photo's height stays the same as the original (272 * 4/3 = 295 * 16/13 ~ 363px), only the width grows */
+  background: #fff; padding: 16px; border-radius: 0; /* sharp corners, matching the cut-paper/polaroid look everywhere else */
+  box-shadow: 0 22px 45px -20px rgba(20, 26, 50, 0.55);
+  transform: translate(-50%, -50%);
+  will-change: transform, opacity; cursor: pointer; user-select: none;
+}
+.pcard__photo {
+  display: block; width: 100%; aspect-ratio: 13 / 16; border-radius: 3px;
+  background: #c3c3c3; object-fit: cover; object-position: top;
+}
+.pcard__cap { padding: 16px 0 0; text-align: left; }
+/* gap is 0 here on purpose — the arrow's own margin-left carries the
+   spacing, and only when the arrow is actually shown (see below), so
+   no gap is reserved while it's hidden */
+.pcard__row { display: flex; align-items: center; gap: 0; }
+.pcard__cap h3 {
+  font-family: "Oswald", sans-serif; font-weight: 500; font-size: 20px;
+  /* normal, not 1.05 — same clipping bug as the mobile title fix:
+     overflow: hidden (needed below for the ellipsis) plus a tight
+     numeric line-height leaves the box a few px shorter than what the
+     glyphs actually need (measured: 21px box vs 26px of real content
+     at 1.05), slicing the tops off. `normal` measured with zero gap. */
+  line-height: normal; letter-spacing: 0.01em; margin: 0; color: #262626; transition: color .25s ease;
+  /* grows to fill the row (pushing the arrow to sit flush against the
+     card's right edge, whatever the title's length) but never wraps —
+     if the appearing arrow eats into its width, it truncates with an
+     ellipsis instead of pushing to a 2nd line */
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.pcard__cap p { font-family: "Source Serif 4", serif; font-weight: 400; font-size: 14px; line-height: 1.2; color: var(--ink); opacity: 0.72; margin: 4px 0 0; letter-spacing: normal; }
+
+/* arrow badge — animates in on the focused/centred card. Collapsed to
+   width: 0 (not just opacity: 0) by default so it reserves no space at
+   all until it's actually shown on focus/hover. width/margin-left are
+   NOT in the transition list — this whole card sits inside .stage,
+   which is transform: scale()'d for the cover-fit layout, and
+   transitioning a layout property (width) inside a scaled ancestor
+   got stuck at its starting value (measured: it never reached 24px,
+   just sat at 0 indefinitely). opacity/transform are compositor-only
+   and don't have that problem, so the icon itself still fades/scales
+   in smoothly — only the space it reserves snaps instantly, which is
+   a much smaller visual cost than the icon never appearing at all. */
+.pcard__arrow {
+  flex: 0 0 auto; width: 0; height: 24px; margin-left: 0; border-radius: 50%;
+  background: #6e7b59; display: grid; place-items: center; overflow: hidden;
+  opacity: 0; transform: scale(0.2) translateX(-4px);
+  transition: opacity .3s ease, transform .35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pcard.is-focus .pcard__arrow { width: 24px; margin-left: 8px; }
+.pcard__arrow svg { width: 13px; height: 13px; display: block; }
+.pcard__cta-text { display: none; }
+.pcard.is-focus .pcard__cap h3 { color: #6e7b59; }
+.pcard.is-focus .pcard__arrow { opacity: 1; transform: scale(1) translateX(0); }
+
+/* arrow nav buttons — exact Figma position (frame 114:84: x809 y801 w108 h48) */
+.carousel__nav {
+  position: absolute; left: 596.33px; top: 480.87px;
+  display: flex; gap: 12px; opacity: 0; visibility: hidden;
+  transition: opacity .35s ease, visibility .35s; z-index: 200;
+}
+.carousel.is-fan .carousel__nav { opacity: 1; visibility: visible; }
+.cbtn {
+  width: 48px; height: 48px; border-radius: 50%; border: 1px solid #9b9387;
+  background: #f4efe7; color: #262626; display: grid; place-items: center; cursor: pointer;
+  transition: background .2s ease;
+}
+.cbtn:hover { background: #e1dace; }
+.cbtn svg { width: 22px; height: 22px; display: block; }
+
+/* mobile-only pagination dots — hidden on desktop, where the arrow
+   buttons above are the nav affordance. See the mobile media query. */
+.carousel__dots { display: none; }
+/* mobile-only sticky-stack spacer — inert on desktop, where the
+   carousel is absolutely positioned and doesn't use normal flow. */
+.pcard-stack-spacer { display: none; }
+
+/* ===================================================================
+   Panel 3 — "Meet Sreejita" (node 92:29537)
+   =================================================================== */
+
+/* full-stage-sized, non-visual wrapper — exists only so GSAP has a box
+   to animate (opacity/x/scale) for the reveal-in; children inside use
+   the same stage-relative coordinates as if they had no wrapper. */
+.p3-desc, .p3-photo, .p3-tools {
+  position: absolute;
+  inset: 0;
+}
+
+/* Text nudged down/right (Meet, Hey there) and up/left (Sreejita) from
+   their original Figma spots, toward the photo cluster below — which is
+   now ~12% smaller (see .p3-desc-card/.p3-photo-card/.p3-tools-strip),
+   so simply shrinking the cluster in place would've left dead space
+   between the text and the images. */
+.p3-hey {
+  left: 533px;
+  top: 165px;
+}
+
+.p3-meet {
+  left: 535px;
+  top: 197px;
+  font-size: 132px;
+  line-height: 158px;
+  letter-spacing: normal;
+}
+
+.p3-name {
+  left: 875px;
+  top: 680px;
+  font-size: 132px;
+  letter-spacing: normal;
+}
+
+/* description card — your flattened asset (frame, frosted look, green
+   lines and bio text all baked in). Scaled to 88% of the original
+   Figma bounding box, toward the shared centre of the photo cluster. */
+.p3-desc-card {
+  position: absolute;
+  left: 481.3px;
+  top: 337.7px;
+  width: 364.3px;
+  height: 446.2px;
+  display: block;
+}
+
+/* photo card — your flattened asset (polaroid frame, pop-out photo
+   effect, decorative marks and toolkit caption all baked in). Scaled to
+   88% of Figma's own rendered bounds (436x569), toward the cluster
+   centre — keeps the "popping out" overlap with Sreejita, just a touch
+   smaller along with everything else. */
+.p3-photo-card {
+  position: absolute;
+  left: 785.8px;
+  top: 254.1px;
+  width: 383.7px;
+  height: 500.7px;
+  display: block;
+}
+
+/* tool icon strip — your flattened asset (uniform-size icons already
+   spaced/sized correctly). Renders before .p3-photo-card in DOM order
+   so the polaroid frame overlaps and tucks in front of it slightly.
+   Scaled to 88%, toward the cluster centre, matching the other two. */
+.p3-tools-strip {
+  position: absolute;
+  left: 1114.9px;
+  top: 262.9px;
+  width: 89.8px;
+  height: 365.7px;
+  display: block;
+}
+
+/* mobile-only: live bio text replacing .p3-desc-card, see media query */
+.p3-bio-text { display: none; }
+
+/* ===================================================================
+   Panel 4 — Experience / Journey
+   =================================================================== */
+.p4-here {
+  left: 415px;
+  top: 154px;
+}
+
+.p4-my {
+  left: 412px;
+  top: 186px;
+  font-size: 132px;
+  line-height: 158px;
+  letter-spacing: normal;
+}
+
+.p4-journey {
+  left: 412px;
+  top: 330px;
+  font-size: 132px;
+  line-height: 158px;
+  letter-spacing: normal;
+}
+
+.p4-timeline {
+  position: absolute;
+  inset: 0;
+}
+
+.p4-timeline-line {
+  position: absolute;
+  left: 1015px;
+  top: 218px;
+  width: 2px;
+  height: 526px;
+  background: repeating-linear-gradient(to bottom, #9b9387 0, #9b9387 8px, transparent 8px, transparent 16px);
+}
+
+.p4-section-label {
+  position: absolute;
+  left: 1062px;
+  margin: 0;
+  font-family: 'Source Serif 4', serif;
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: normal;
+  color: var(--sage);
+}
+
+.p4-section-label--a { top: 150px; }
+.p4-section-label--b { top: 580px; }
+
+.p4-entry {
+  position: absolute;
+  left: 984px;
+  width: 600px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.p4-entry--0 { top: 190px; }
+.p4-entry--1 { top: 290px; }
+.p4-entry--2 { top: 390px; }
+.p4-entry--3 { top: 490px; }
+.p4-entry--4 { top: 616px; }
+.p4-entry--5 { top: 716px; }
+
+/* Airtel not announced yet: data-airtel="hidden" on .p4-timeline hides its
+   entry, keeps Housing at "Present" and spaces the other five out to fill the
+   column. Remove the attribute to show Airtel (see CLAUDE.md, "airtel"). */
+.p4-end-airtel { display: none; }
+.p4-timeline[data-airtel="hidden"] .p4-entry--0 { display: none; }
+.p4-timeline:not([data-airtel="hidden"]) .p4-end-now { display: none; }
+.p4-timeline:not([data-airtel="hidden"]) .p4-end-airtel { display: inline; }
+@media (min-width: 861px) {
+  .p4-timeline[data-airtel="hidden"] .p4-timeline-line { top: 224px; height: 508px; }
+  .p4-timeline[data-airtel="hidden"] .p4-section-label--a { top: 154px; }
+  .p4-timeline[data-airtel="hidden"] .p4-section-label--b { top: 540px; }
+  .p4-timeline[data-airtel="hidden"] .p4-entry--1 { top: 196px; }
+  .p4-timeline[data-airtel="hidden"] .p4-entry--2 { top: 316px; }
+  .p4-timeline[data-airtel="hidden"] .p4-entry--3 { top: 436px; }
+  .p4-timeline[data-airtel="hidden"] .p4-entry--4 { top: 584px; }
+  .p4-timeline[data-airtel="hidden"] .p4-entry--5 { top: 704px; }
+}
+
+.p4-entry-logo {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  object-fit: cover;
+  display: block;
+  box-shadow: 0 10px 22px -10px rgba(20, 26, 50, 0.4);
+}
+
+.p4-entry-text h3 {
+  margin: 0 0 4px;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: normal;
+  color: var(--ink);
+}
+
+.p4-entry-text p {
+  margin: 0;
+  font-family: 'Source Serif 4', serif;
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: normal;
+  color: var(--ink);
+  opacity: 0.72;
+}
+
+/* ===================================================================
+   Panel 5 — Contact
+   =================================================================== */
+.p5-heading {
+  position: absolute;
+  left: 0;
+  top: 237px;
+  width: 1726px;
+  text-align: center;
+}
+
+.p5-feels {
+  position: static;
+  margin: 0 0 4px;
+}
+
+.p5-connect {
+  position: static;
+  margin: 0;
+  font-size: 132px;
+  line-height: 158px;
+}
+
+.p5-links {
+  position: absolute;
+  z-index: 10; /* above page 5's mini-me canvas (9), so her ladder never covers the pills */
+  left: 0;
+  top: 510px;
+  width: 1726px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.p5-copy-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 0 0 2px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  opacity: 0.65;
+  transition: opacity .2s ease;
+}
+
+.p5-copy-btn:hover {
+  opacity: 1;
+}
+
+.p5-copy-btn svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.p5-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  border-radius: 999px;
+  border: 1px solid #9b9387;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Source Serif 4', serif;
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: normal;
+  text-decoration: none;
+  transition: background .2s ease;
+}
+
+.p5-link:hover {
+  background: #e1dace;
+}
+
+.p5-link-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 5px;
+  display: block;
+}
+
+.p5-sphere {
+  left: 50%;
+  top: 654px;
+  transform: translateX(-50%) scale(0.75);
+  transform-origin: top center;
+}
+
+/* ===================================================================
+   MOBILE (<= 860px) — full reflow from the fixed 1726x996 desktop
+   stage to a normal-flow, single-column layout. See flip.js's
+   matching `max-width: 860px` matchMedia branch for the JS side
+   (disables the page-flip, does a vertical scroll with gentle reveals
+   instead).
+   =================================================================== */
+@media (max-width: 860px) {
+
+  .panel { min-height: auto; }
+
+  /* top-right avatar+hamburger pill — replaces the desktop tick nav's
+     always-visible position; .dots becomes the dropdown it toggles. */
+  .mobile-nav-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 600;
+    border: none;
+    border-radius: 999px;
+    padding: 4px 10px 4px 4px;
+    background: #dbd7cf;
+    cursor: pointer;
+  }
+  .mobile-nav-avatar { width: 40px; height: 40px; border-radius: 50%; display: block; object-fit: cover; }
+  .mobile-nav-hamburger { width: 24px; height: 24px; display: block; }
+
+  /* .dots: tick-stack -> dropdown card anchored under the pill. Every
+     rule here overrides the desktop tick styling further up the file —
+     later in source order wins at equal specificity, no !important
+     needed. */
+  .dots {
+    position: fixed;
+    top: 72px;
+    right: 16px;
+    left: auto;
+    transform: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    width: 200px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 8px;
+    box-shadow: 0 12px 30px -10px rgba(20, 26, 50, 0.25);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity .2s ease, transform .2s ease, visibility .2s ease;
+  }
+  .dots.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .dot {
+    width: auto;
+    height: auto;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: transparent;
+  }
+  .dot.is-active { width: auto; background: #f4efe7; }
+  .dot:hover { background: #f4efe7; }
+  .dot::after {
+    content: attr(data-label);
+    position: static;
+    opacity: 1;
+    transform: none;
+    display: block;
+    font-size: 16px;
+    color: var(--ink);
+    white-space: nowrap;
+    transition: none;
+  }
+  .dot.is-active::after { font-weight: 600; }
+
+  /* stage: stop scaling the fixed desktop canvas, become a normal-
+     flow flex column instead. Absolutely-positioned children (vector
+     pattern, stars) stay out of flow and are repositioned below. */
+  .stage-wrapper { position: static; }
+  .stage {
+    position: relative;
+    width: 100%;
+    height: auto;
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 56px 20px;
+    gap: 8px;
+  }
+  /* section rhythm, Work through Contact: same heading -> content gap
+     (24px) on every one of them, replacing four different ad-hoc
+     values (36px/5.56vw/24px/20px). Top padding is NOT uniform though
+     — Work specifically wants less clearance than the other three. */
+  #panel-3 .stage, #panel-4 .stage, #panel-5 .stage {
+    padding-top: 46px;
+  }
+  #panel-2 .stage { padding-top: 28px; }
+  /* more breathing room between sections — Work through Contact each
+     get extra bottom padding before the next one starts (was the
+     base .stage's flat 56px, unchanged; this adds to it) */
+  #panel-2 .stage, #panel-3 .stage, #panel-4 .stage {
+    padding-bottom: 88px;
+  }
+  /* the mobile frame's own hero text starts right at the torn edge's
+     bottom (no dedicated top padding) — the fixed nav pill floats over
+     the tall top strip regardless, no clearance needed here */
+  #panel-1 .stage { padding-top: 0; padding-bottom: 0; }
+  /* --hero-content-top moves the text up on short viewports (applied
+     as margin on the first line, not stage padding — padding can't go
+     negative) */
+  /* Applied to the PRECEDING sibling's margin-bottom, not the text's
+     own margin-top: #panel-1 has overflow:hidden, and a negative
+     margin-top on the text pushes it above the stage-wrapper's own
+     established top edge, which then gets clipped by that overflow
+     (confirmed — this cut the top off "A little portfolio of" on
+     shorter viewports). Shrinking the strip's claimed space instead
+     lets normal flow pull the text up safely, with the two overlapping
+     only within #panel-1's own box (text paints over the strip's
+     tail, never escapes it). */
+  #panel-1 .paper-strip-wrap--top { margin-bottom: var(--hero-content-top); }
+
+  /* Hero is locked to exactly one screen — min-height is a REAL cap
+     here in practice, not just a floor, because nothing inside is
+     allowed to force it taller: the photo and the bottom torn-paper
+     transition are both taken out of normal flow (position: absolute)
+     below, so neither one can push #panel-1 past 100svh regardless of
+     how tall they render. dvh first as a fallback for browsers without
+     svh support; svh (excludes the address-bar/toolbar chrome) wins
+     when available. */
+  #panel-1 {
+    min-height: 100dvh;
+    min-height: 100svh;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    /* Height-responsive hero — every size/spacing value below reads
+       from these instead of a hardcoded vw number, so the six
+       max-height breakpoints further down can compress the whole
+       composition (photo, text, spacing) in lockstep as the viewport
+       gets shorter, without ever touching the hero's own 100svh or
+       moving the torn paper. Defaults here are the normal/tall case
+       (the exact Figma-derived values from before); each breakpoint
+       overrides only what needs to shrink. */
+    --hero-content-top: 0px;      /* stage padding-top; goes negative to pull text up on short screens */
+    --hero-title-size: 17.22vw;   /* "Sreejita"/"Mookherjee", 62px at 360 wide */
+    --hero-script-size: 5vw;      /* the two script lines, 18px at 360 wide */
+    --hero-spacing: 4.44vw;       /* script->name, name->script, script->cue gaps (16px at 360 wide) */
+    --hero-name-gap: 2.22vw;      /* "Sreejita"->"Mookherjee" gap specifically (8px at 360 wide) */
+    --hero-cue-size: 20.5vw;      /* scroll-cue circle width (height follows via aspect-ratio below) */
+    --hero-photo-size: 67.97vw;   /* photo width (244.7 of 360px) */
+    /* NOTE: negative here means the photo's bottom edge sits BELOW the
+       hero's own bottom edge (tucked behind the torn paper); a value
+       that's too close to 0 (or positive) pushes the photo up far
+       enough to collide with the scroll-cue above it — that's exactly
+       what happened before this rebuild (measured a real -34px
+       overlap at normal height). -13vw keeps a real ~38px clear gap
+       from the cue while still tucking behind the torn paper. */
+    --hero-photo-bottom: -22.73vw; /* moved down 20px, then 15px more = 35px total */
+    /* the scroll-cue's own top gap — deliberately bigger than
+       --hero-spacing (measured: cue sat only ~13px under the text but
+       left a ~242px dead gap down to the bottom-anchored photo below
+       it, since that photo doesn't flow right after the cue). Eats
+       into that slack instead of leaving it empty; shrinks at the
+       shorter-viewport tiers below where there's much less slack to
+       spare (the photo itself climbs higher there). */
+    --hero-cue-margin-top: 15vw;
+  }
+
+  /* ---- Height-responsive breakpoints -------------------------------
+     Chosen to compress gracefully: photo shrinks fastest (it's the
+     most compressible/least essential element), spacing and cue size
+     next, headline/script sizes last and only slightly ("slightly
+     reduce heading size IF NECESSARY" per spec) — text staying legible
+     matters more than the decorative photo staying large. Each step
+     was checked against real rendered layout (offsetTop/offsetHeight,
+     not guessed) to keep a real ≥24px gap between the text block's
+     bottom and the photo's top at common widths (~360-430px). */
+  @media (max-height: 820px) {
+    #panel-1 {
+      --hero-content-top: -12px;
+      --hero-title-size: 15.5vw;
+      --hero-spacing: 3.6vw;
+      --hero-name-gap: 1.8vw;
+      --hero-cue-size: 17vw;
+      --hero-photo-size: 56vw;
+      --hero-photo-bottom: 1.27vw; /* moved down 20px, then 15px more; re-verify cue clearance */
+      --hero-cue-margin-top: 11vw;
+    }
+  }
+  @media (max-height: 760px) {
+    #panel-1 {
+      --hero-content-top: -22px;
+      --hero-title-size: 14vw;
+      --hero-script-size: 4.6vw;
+      --hero-spacing: 2.8vw;
+      --hero-name-gap: 1.4vw;
+      --hero-cue-size: 14vw;
+      --hero-photo-size: 46vw;
+      --hero-photo-bottom: 8.17vw; /* moved down 20px, then 15px more; re-verify cue clearance */
+      --hero-cue-margin-top: 8vw;
+    }
+  }
+  @media (max-height: 700px) {
+    #panel-1 {
+      --hero-content-top: -32px;
+      --hero-title-size: 12.5vw;
+      --hero-script-size: 4.2vw;
+      --hero-spacing: 2.1vw;
+      --hero-name-gap: 1vw;
+      --hero-cue-size: 11.5vw;
+      --hero-photo-size: 38vw;
+      --hero-photo-bottom: 8.17vw; /* moved down 20px, then 15px more; re-verify overlap */
+      --hero-cue-margin-top: 6vw;
+    }
+  }
+  @media (max-height: 650px) {
+    #panel-1 {
+      --hero-content-top: -40px;
+      --hero-title-size: 11.2vw;
+      --hero-script-size: 3.9vw;
+      --hero-spacing: 1.5vw;
+      --hero-name-gap: 0.7vw;
+      --hero-cue-size: 9.5vw;
+      --hero-photo-size: 31vw;
+      --hero-photo-bottom: 9.27vw; /* moved down 20px, then 15px more; re-verify overlap */
+      --hero-cue-margin-top: 5vw;
+    }
+  }
+  /* stage-wrapper/stage still fill the space below the top strip — not
+     to let content grow into it, but so the photo (absolutely
+     positioned *inside* .stage) has that full remaining height to
+     bottom-anchor against, instead of just the text block's height. */
+  #panel-1 .stage-wrapper { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #panel-1 .stage { flex: 1; min-height: 0; }
+  /* the old bare-arrow hint would otherwise sit below the photo — the
+     scroll cue above the photo already covers that affordance here */
+  #panel-1 .scroll-hint { display: none; }
+
+  /* the hero's own bottom-anchored transition into Work — fixed to the
+     viewport-height hero's bottom edge (not flowing content, and not
+     panel-2's problem), sitting ABOVE the photo (z-index 20 vs 15) so
+     the photo's lower portion tucks in behind it. */
+  #panel-1 .paper-strip-wrap--bottom {
+    display: block;
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    width: 100%;
+    transform: none;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  /* the small polaroid photo: taken OUT of the text column's flow
+     entirely (position: absolute, not a flex item) specifically so it
+     can never affect #panel-1's height — sizing it up or down just
+     changes how much of it tucks behind the torn paper below, nothing
+     else. Bottom-anchored so that portion is a deliberate, fixed
+     overlap rather than whatever the text column's leftover space
+     happens to be. Width is still the exact Figma ratio (244.7 of
+     360px = 67.97vw). */
+  .p1-photo-card {
+    position: absolute;
+    left: 50%;
+    top: auto;
+    bottom: var(--hero-photo-bottom);
+    transform: translateX(-50%);
+    width: var(--hero-photo-size);
+    margin: 0;
+    z-index: 15;
+  }
+
+  /* Exact typography spec, given directly (not re-derived from a
+     screenshot or a node fetch this time):
+     — Work / Meet Sreejita / My Journey / Let's Connect headlines:
+       Oswald 600, 44px, line-height 45px (ratio 1.0227), uppercase.
+     — Selected / Hey there, / Here's / Interested in working together
+       (the script line right before each of those headlines) AND
+       Home's own "A little portfolio of" / "a product designer":
+       Source Serif 4, 18px, line-height 15px (ratio 0.8333),
+       letter-spacing -0.18px (-0.05vw).
+     — Home's "Sreejita" / "Mookherjee": Oswald 600, 62px, line-height
+       62px (ratio 1, no extra leading at all).
+     All in vw off the 360px frame so nothing can drift at other
+     viewport widths (see the collision postmortem below). */
+  .headline {
+    position: static;
+    text-align: center;
+    font-size: 12.22vw;   /* 44px */
+    line-height: 1.0227;  /* 45px */
+    letter-spacing: normal;
+  }
+  #panel-1 .headline {
+    font-size: var(--hero-title-size);
+    line-height: 1;      /* 62px */
+  }
+  .script {
+    position: static;
+    text-align: center;
+    font-size: 5vw;         /* 18px */
+    line-height: 0.8333;    /* 15px */
+    letter-spacing: -0.05vw; /* -0.18px */
+    margin: 0;
+  }
+  /* height-responsive override of the shared .script size, Home only */
+  #panel-1 .script { font-size: var(--hero-script-size); }
+
+  /* Gaps — every one of these is "8px at 360px wide", expressed as
+     calc(2.22vw - 8px) ADDED on top of .stage's existing flat 8px
+     flex `gap` (rather than replacing it), so the total is exactly
+     2.22vw at any width instead of a flat 8px that would drift from
+     the vw-scaled type around it. Home is the one exception: its
+     .stage gap is 0 (see below), so its margins are plain vw with no
+     calc() needed. All three now read from --hero-spacing/
+     --hero-name-gap so a short viewport tightens them too. */
+  #panel-1 .stage { gap: 0; }
+  #panel-1 .headline-first { margin-top: var(--hero-spacing); }  /* 16px, after "A little portfolio of" */
+  #panel-1 .headline-second { margin-top: var(--hero-name-gap); } /* 8px, "Sreejita" -> "Mookherjee" */
+  #panel-1 .script-bottom { margin-top: var(--hero-spacing); }   /* 16px, before "a product designer" */
+
+  /* .p3-title-row/.p4-title-row sit as direct .stage children, so
+     .stage's flat 8px gap already contributes there — this just tops
+     it up to a true vw ratio. .p2-title/.p5-connect are different:
+     they're nested one level deeper inside their own .p2-heading/
+     .p5-heading wrapper (not a .stage child at all), so that flat 8px
+     never applied to them — they need the FULL vw value instead of a
+     top-up, or the gap ends up ~1px instead of ~8px. */
+  .p3-title-row, .p4-title-row {
+    margin-top: calc(2.22vw - 8px);
+  }
+  .p2-title, .p5-connect {
+    margin-top: 2.22vw;
+  }
+
+  /* "Meet Sreejita" / "My Journey" — desktop splits these across two
+     scattered, independently-positioned lines; on mobile each reads
+     better as one Oswald headline on a single line. Font-size comes
+     from the shared .headline rule above — every one of these four
+     headings (Work/Meet Sreejita/My Journey/Let's Connect) shares the
+     same 44px size, no special smaller case for any of them. */
+  .p3-title-row, .p4-title-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  /* background vector pattern — recentred + shrunk to read as a
+     texture rather than dominate a narrow viewport */
+  .vector-wrap, .vector-wrap--2 {
+    left: 50%;
+    top: 50%;
+    width: 820px;
+    height: 760px;
+    transform: translate(-50%, -50%);
+  }
+  .vector-rotate, .vector-rotate--2 { width: 620px; height: 524px; }
+  /* the asset's own radial gradient fades to fully transparent at its
+     edges (by design, for the desktop-sized canvas) — at mobile's much
+     smaller crop the visible portion can land mostly in that faded-out
+     zone and read as faint. Boosted further here (was too light still)
+     rather than editing the shared asset. */
+  #panel-1 .vector-img { filter: saturate(5) contrast(1.8) brightness(0.85); }
+  /* recentred on the actual viewport, not the stage sub-box: .stage
+     starts below the top torn strip, so its own 50% lands noticeably
+     lower than true viewport-centre — shift up to compensate. */
+  #panel-1 .vector-wrap { top: 35%; }
+
+  /* stars — thin out from 5/3 down to 2 per panel, tucked into
+     corners instead of scattered at the desktop canvas coordinates */
+  .star { width: 22px; height: 22px; }
+  .star-b, .star-d, .star-e { display: none; }
+  .star-a { left: auto; right: 20px; top: 24px; }
+  .star-c { left: 20px; top: auto; bottom: 24px; }
+
+  .p2-star { width: 22px; height: 22px; }
+  .p2-star-b { display: none; }
+  .p2-star-a { left: auto; right: 20px; top: 24px; }
+  .p2-star-c { left: 20px; top: auto; bottom: 24px; }
+
+  /* paper strips — bookends (top of Home, bottom of Contact) plus
+     Home's own bottom-anchored transition into Work (mobile design's
+     own asset, swapped in via <picture> in index.html; positioned
+     absolute against the hero, see #panel-1 .paper-strip-wrap--bottom
+     above). The remaining 7 mid-page strips are dropped; they'd read
+     as clutter on a fast mobile scroll. */
+  .paper-strip-wrap { display: none; }
+  #panel-1 .paper-strip-wrap--top,
+  #panel-5 .paper-strip-wrap--bottom {
+    display: block;
+    position: static;
+    width: 100%;
+    transform: none;
+  }
+
+  /* "scroll to continue" hint — a plain down-arrow on mobile (the
+     text reads as clutter here; the arrow alone is a clearer nudge
+     on a touch screen), flowing right under the hero content instead
+     of being pinned to the (now content-height) panel edge */
+  .scroll-hint {
+    position: static;
+    width: fit-content;
+    margin: 24px auto 0;
+    transform: none;
+    justify-content: center;
+  }
+  .scroll-hint span { display: none; }
+  .scroll-hint svg {
+    width: 26px;
+    height: 26px;
+    transform: rotate(90deg);
+    animation: scrollHintBounce 1.4s ease-in-out infinite;
+  }
+  @keyframes scrollHintBounce {
+    0%, 100% { transform: rotate(90deg) translateX(0); }
+    50% { transform: rotate(90deg) translateX(6px); }
+  }
+
+  /* sphere / waving-hand badge (Contact only on mobile — Home's mobile
+     scroll cue below replaces it there, matching the mobile design) */
+  .sphere {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: 84px;
+    height: 92px;
+    margin-top: 20px;
+  }
+  .sphere-hand { left: 8px; top: 10px; width: 68px; height: 68px; }
+  .p5-sphere { left: auto; top: auto; transform: none; }
+  #panel-1 .sphere { display: none; }
+
+  /* mobile-only "scroll to continue" cue — sage circle (sphere-2 asset)
+     + a plain white down-arrow, sitting between the hero text and the
+     photo (see the reordered markup in index.html). */
+  .mobile-scroll-cue {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--hero-cue-size);
+    height: calc(var(--hero-cue-size) * 1.083); /* same 73.6:80 aspect as the default size */
+    flex: none;
+    margin: var(--hero-cue-margin-top) 0 4px;
+    animation: mobileCueBounce 1.4s ease-in-out infinite;
+    /* now a real <button> (clicking it scrolls to Selected Work) —
+       strip the native button chrome so it still looks like the plain
+       decorative circle it was before */
+    border: none; background: transparent; padding: 0; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-scroll-cue img { position: absolute; width: 100%; height: 100%; }
+  .mobile-scroll-cue svg { position: relative; width: 24px; height: 24px; }
+  @keyframes mobileCueBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(6px); }
+  }
+
+  /* ---------------- Panel 2 — Selected Work: sticky card stack -------
+     Replaced the touch-swipe carousel entirely — cards now sit in
+     normal vertical document flow, each pinned via position: sticky at
+     the same offset, so scrolling makes the next card slide up and
+     cover the one before it, like flipping through a loosely-stacked
+     pile of photos. Every card always shows its full content (title,
+     company/label, "Read more") now — there's no more "focused vs
+     side" state to gate on, since cards aren't cycling through one
+     focused slot anymore. Pure CSS: no touch handlers, no JS-driven
+     index/width/transform math, no swipe-vs-native-zoom conflicts. */
+  /* GSAP's ScrollTrigger `pin` (in flip.js) handles the actual
+     pinning — plain CSS position: sticky here stuck for as long as
+     .stage's *own* full height allowed, which ran noticeably longer
+     than the last card's own stick duration (confirmed live: the
+     heading was still pinned solid well after the last card had
+     already released and scrolled away). A hand-guessed pixel offset
+     to end a matching class-toggle at the "right" point *also* missed
+     (confirmed: the spacer's own position when the card released
+     wasn't anywhere near the offset the math assumed) — GSAP's pin
+     measures real element positions at refresh time instead of
+     guessing, so it can't drift out of sync with the actual layout. */
+  .p2-heading {
+    position: static;
+    left: auto; top: auto;
+    width: auto;
+    align-self: stretch;
+    z-index: 20;
+    background: var(--bg);
+    padding-bottom: 6px;
+  }
+
+  /* position: sticky needs every ancestor's overflow to stay visible —
+     .panel and .stage-wrapper are overflow: hidden by default
+     (relied on elsewhere to clip oversized decorative backgrounds),
+     so panel-2 specifically opts out of that. */
+  #panel-2, #panel-2 .stage-wrapper {
+    overflow: visible;
+  }
+  /* the background vector pattern and corner stars no longer fit
+     sensibly *inside* .stage once .stage is many thousands of px tall
+     (one card's worth of scroll room each) — pinned to the viewport
+     instead so they read as a constant backdrop/corner accents behind
+     the whole scrolling stack, not one faint smudge wherever .stage's
+     midpoint happens to land. */
+  /* position: sticky was tried here (a fixed element leaking into the
+     hero was reported on a real phone) but sticky elements, unlike
+     fixed ones, still occupy their own real width/height in normal
+     document flow — this element's is sizable, so it opened up a big
+     empty gap between Home and Selected Work. Back to fixed, but with
+     the hide mechanism hardened from visibility:hidden to display:none
+     — display:none is a more absolute removal from rendering (no GPU
+     layer to even exist), in case the flakiness was specifically a
+     fixed + visibility interaction on that phone's browser. */
+  #panel-2 .vector-wrap { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; }
+  #panel-2 .p2-star { position: fixed; display: none; }
+  body.is-work-active #panel-2 .vector-wrap,
+  body.is-work-active #panel-2 .p2-star { display: block; }
+
+  .carousel {
+    position: static;
+    left: auto; top: auto;
+    align-self: stretch;
+    width: auto;
+    height: auto;
+    margin-top: 24px; /* consistent heading->content gap, Work through Contact */
+  }
+  .carousel__stage {
+    position: static;
+    display: block;
+  }
+  /* gives the LAST card actual trailing sibling content to stick
+     against — container padding-bottom was tried first and measured
+     to NOT work (the last card just scrolled straight through top:
+     90px, never pinning, confirmed via getBoundingClientRect() across
+     the whole scroll range). ~520px card height + 28px margin, so it
+     gets roughly the same dwell time as every other card. */
+  .pcard-stack-spacer { display: block; height: 100px; }
+
+  .pcard {
+    position: sticky;
+    top: 129px; /* pinned .p2-heading (top:28px) ends ~105px + a real 24px gap */
+    left: auto;
+    width: 82vw;
+    max-width: 360px;
+    margin: 0 auto 43px; /* visible peek ~= margin - 13px (measured: 28->15, 15->2, 22->9); targeting ~30px visible, up from the original 15px */
+    transform-origin: center top;
+    /* position: sticky + a CSS transform (the rotation below) on the
+       same element is a known class of browser rendering glitch —
+       during scroll, the sticky recalculation can momentarily clip the
+       element to its un-rotated bounding box for a single frame before
+       repainting the transform correctly, which reads as a corner
+       getting "cut" (confirmed: a screenshot caught it happening on
+       the rotated top-left corner specifically, intermittently).
+       Promoting the card to its own GPU layer ahead of time avoids the
+       recalculation glitch entirely. */
+    will-change: transform;
+    backface-visibility: hidden;
+    /* lighter than the desktop-inherited shadow — with up to 8 cards
+       stacked (the ones underneath are hidden but still rendered),
+       identical shadows compound into a much heavier, thicker-looking
+       edge than any single card was designed for */
+    box-shadow: 0 10px 20px -12px rgba(20, 26, 50, 0.35);
+  }
+  /* subtle alternating tilt, like a loosely stacked pile of polaroids —
+     deliberately not identical card to card, but never more than a few
+     degrees so it reads as tidy rather than messy. First card stays
+     perfectly straight (0deg) — reads as the "top of the deck" landing
+     squarely before the rest fan out underneath it. */
+  .pcard:nth-child(1) { transform: rotate(0deg); }
+  .pcard:nth-child(2) { transform: rotate(3deg); }
+  .pcard:nth-child(3) { transform: rotate(-3deg); }
+  .pcard:nth-child(4) { transform: rotate(2deg); }
+  .pcard:nth-child(5) { transform: rotate(-4deg); }
+  .pcard:nth-child(6) { transform: rotate(3deg); }
+  .pcard:nth-child(7) { transform: rotate(-2deg); }
+  .pcard:nth-child(8) { transform: rotate(1.5deg); } /* the final resting card — toned down from 4deg, which read as too tilted once it's the one left sitting on top */
+  /* later cards need a higher stacking order so they visibly cover the
+     earlier ones as they scroll into the shared sticky position */
+  .pcard:nth-child(1) { z-index: 1; }
+  .pcard:nth-child(2) { z-index: 2; }
+  .pcard:nth-child(3) { z-index: 3; }
+  .pcard:nth-child(4) { z-index: 4; }
+  .pcard:nth-child(5) { z-index: 5; }
+  .pcard:nth-child(6) { z-index: 6; }
+  .pcard:nth-child(7) { z-index: 7; }
+  .pcard:nth-child(8) { z-index: 8; }
+
+  .pcard__cap h3 {
+    font-size: 18px;
+    line-height: normal;
+    overflow: hidden;
+    white-space: normal;
+    max-height: 52px; /* room for up to 2 lines, always shown now */
+  }
+  .pcard__cap p { font-size: 14px; margin-top: 4px; }
+
+  /* every card always shows its title/subtitle/button in this order —
+     the button's markup sits inside .pcard__row alongside the h3, but
+     the subtitle <p> is a sibling of .pcard__row, so getting the
+     button to render AFTER the <p> needs .pcard__row to stop being its
+     own box: `display: contents` unwraps it so h3/arrow become direct
+     flex items of .pcard__cap right alongside <p>, and `order` then
+     puts them in the real visual sequence: title, subtitle, button. */
+  .pcard__cap { display: flex; flex-direction: column; }
+  .pcard__row { display: contents; }
+  .pcard__cap h3 { order: 1; }
+  .pcard__cap p { order: 2; }
+  .pcard__arrow {
+    order: 3;
+    margin-top: 12px;
+    opacity: 1;
+    /* the base (desktop) rule defaults to transform: scale(0.2) — only
+       .is-focus grows it to scale(1), and mobile cards never get
+       .is-focus anymore (every card always shows full content now),
+       so without this override every "Read more" button was rendering
+       at 20% size, effectively invisible. */
+    transform: none;
+    width: auto;
+    height: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    padding: 9px 16px;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .pcard__cta-text {
+    display: inline;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  /* no more "1 of 8" counter — that only made sense for a single
+     focused slot cycling through cards; a scrollable stack doesn't
+     have a clean equivalent, so it's just dropped rather than faked */
+  .carousel__nav { display: none; }
+  .carousel__dots { display: none; }
+
+  /* ---------------- Panel 3 — Meet Sreejita ---------------- */
+  /* the flattened desc-card image is dropped on mobile in favour of
+     live, readable text (.p3-bio-text below); the tools strip moves
+     in beside the photo card instead of standing alone as its own
+     block. DOM order already puts these after the heading and before
+     the bio text, so no explicit `order` is needed. */
+  .p3-desc-card { display: none; }
+
+  /* mobile design: photo on the left, tools strip tucked in overlapping
+     its right edge — same "tucked in" relationship as desktop, not a
+     clean gap. Every value here is the exact Figma node position, not
+     a re-derived screenshot estimate: photo 260.56 of 360px = 72.38vw;
+     icon column 276.2 of 360px tall = 76.72vw; icon left edge sits
+     19.56px (5.43vw) before the photo's right edge. */
+  .p3-photo-group {
+    margin-top: 24px; /* consistent heading->content gap, Work through Contact */
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+  }
+  .p3-photo-card {
+    position: static;
+    order: 1;
+    width: 72.38vw;
+    height: auto;
+  }
+  .p3-tools-strip {
+    position: static;
+    order: 2;
+    width: auto;
+    height: 76.72vw;
+    margin-left: -5.43vw;
+  }
+
+  .p3-bio-text {
+    display: block;
+    margin-top: 20px;
+    width: min(84vw, 340px);
+    font-family: 'Source Serif 4', serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .p3-bio-text p { margin: 0; }
+
+  /* ---------------- Panel 4 — Journey ---------------- */
+  .p4-timeline {
+    position: relative;
+    inset: auto;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-left: 44px;
+    margin-top: 24px;
+  }
+  .p4-timeline-line {
+    left: 14px;
+    top: 4px;
+    bottom: 4px;
+    height: auto;
+  }
+  .p4-entry-logo { width: 54px; height: 54px; }
+  .p4-section-label { position: static; left: auto; margin: 0; font-size: 16px; }
+  /* extra breathing room between the Full-time and Internships
+     groups, on top of the timeline's own 20px item gap */
+  .p4-section-label--b { margin-top: 16px; }
+  .p4-entry { position: static; left: auto; top: auto; width: auto; gap: 16px; }
+  .p4-entry-text h3 { font-size: 20px; }
+  .p4-entry-text p { font-size: 16px; }
+
+  /* ---------------- Panel 5 — Contact ---------------- */
+  .p5-heading {
+    position: static;
+    left: auto; top: auto;
+    width: auto;
+    align-self: stretch;
+  }
+  .p5-links {
+    position: static;
+    left: auto; top: auto;
+    width: auto;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 24px; /* consistent heading->content gap, Work through Contact */
+  }
+  .p5-link { width: min(84vw, 320px); justify-content: center; padding: 14px 20px; font-size: 18px; }
+}
