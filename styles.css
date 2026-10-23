@@ -2,7 +2,7 @@
   font-family: 'Oswald';
   font-style: normal;
   font-weight: 600;
-  font-display: swap;
+  font-display: block;
   src: url('assets/fonts/oswald-semibold.woff2') format('woff2');
 }
 
@@ -249,6 +249,10 @@ body.js-flip .panel {
   display: block;
   z-index: 5;
 }
+  @media (min-width: 861px) and (prefers-reduced-motion: no-preference) {
+     .p1-photo-card { visibility: hidden; }
+     #stage-1 .sphere { visibility: hidden; }
+   }
 
 /* mobile-only "scroll to continue" cue — hidden entirely on desktop,
    where the bare .scroll-hint arrow + wave-hand .sphere do this job

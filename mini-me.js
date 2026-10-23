@@ -48,14 +48,14 @@ import { introSeen, markIntroSeen } from './mini-me-kit.js?v=12';
   if (sphere) { gsap.killTweensOf(sphere); gsap.set(sphere, { opacity: 0 }); }
   let waveShown = false;
   function showWave() {
-    if (waveShown || !sphere) return; waveShown = true;
+    if (waveShown || !sphere) return; waveShown = true; sphere.style.visibility = "visible";
     // a fresh URL restarts the SVG's own wave animation from its first frame
     if (waveHand) waveHand.src = waveHand.getAttribute("src").split("?")[0] + "?w=" + Date.now();
     gsap.fromTo(sphere, { opacity: 0, scale: 0.3, rotation: -25 },
       { opacity: 1, scale: 1, rotation: 0, duration: 0.65, ease: "back.out(1.7)" });
   }
   let bailed = false, ready = false;
-  function bail() { if (bailed) return; bailed = true; showWave(); releaseHint(); teardown(); }
+  function bail() { if (bailed) return; bailed = true; if (photo) { photo.style.display = ""; photo.style.visibility = "visible"; } showWave(); releaseHint(); teardown(); }
   const bailTimer = setTimeout(() => { if (!ready) bail(); }, 7000);
 
   /* ---------------- where things go (stage px) ---------------- */

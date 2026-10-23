@@ -7,8 +7,8 @@
   var IDLE_MS = 3000;
   var timer = null;
   var onHomePage = true; // Home is the active page on load
-  var held = false;      // mini-me.js holds the hint back until her intro is done
-
+   var held = window.matchMedia("(min-width: 861px) and (prefers-reduced-motion: no-preference)").matches;
+   if (held) setTimeout(function () { if (held) { held = false; resetTimer(); } }, 15000);
   /* tells anyone listening (mini-me.js) when the hint appears/disappears */
   function announce(visible) {
     window.dispatchEvent(new CustomEvent("scrollhint", { detail: { visible: visible } }));
